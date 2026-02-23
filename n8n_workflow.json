@@ -1,0 +1,260 @@
+{
+    "name": "GoJob Ultimate Job Import Pipeline + Telegram",
+    "nodes": [
+        {
+            "id": "1",
+            "name": "Schedule Trigger",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                200,
+                200
+            ],
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "hours",
+                            "hoursInterval": 1
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "id": "2",
+            "name": "Fetch Remotive Jobs",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                420,
+                80
+            ],
+            "parameters": {
+                "url": "https://remotive.com/api/remote-jobs?limit=10"
+            }
+        },
+        {
+            "id": "3",
+            "name": "Split Remotive",
+            "type": "n8n-nodes-base.itemLists",
+            "typeVersion": 3,
+            "position": [
+                640,
+                80
+            ],
+            "parameters": {
+                "fieldToSplitOut": "jobs"
+            }
+        },
+        {
+            "id": "4",
+            "name": "Telegram Trigger",
+            "type": "n8n-nodes-base.telegramTrigger",
+            "typeVersion": 1,
+            "position": [
+                200,
+                400
+            ],
+            "parameters": {
+                "updates": [
+                    "message"
+                ]
+            },
+            "credentials": {
+                "telegramApi": {
+                    "name": "Telegram Bot"
+                }
+            }
+        },
+        {
+            "id": "5",
+            "name": "Parse Telegram Message",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                420,
+                400
+            ],
+            "parameters": {
+                "functionCode": "const text = $json.message.text || '';\nfunction extract(label) {\n  const regex = new RegExp(label + '[:\\\\-]\\\\s*(.*)', 'i');\n  const match = text.match(regex);\n  return match ? match[1].trim() : '';\n}\nreturn [{ json: {\n  title: extract('Role') || extract('Title'),\n  company: extract('Company'),\n  location: extract('Location') || 'Remote',\n  salary: extract('Salary') || 'Not Disclosed',\n  applyLink: extract('Apply'),\n  description: text,\n  source: 'telegram'\n}}];"
+            }
+        },
+        {
+            "id": "6",
+            "name": "Merge All Sources",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 2,
+            "position": [
+                860,
+                250
+            ],
+            "parameters": {
+                "mode": "append"
+            }
+        },
+        {
+            "id": "7",
+            "name": "Normalize Fields",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                1080,
+                250
+            ],
+            "parameters": {
+                "functionCode": "return items.map(item => {\n  const j = item.json;\n  return { json: {\n    title: j.title || '',\n    company: j.company || j.company_name || '',\n    location: j.location || 'Remote',\n    salary: j.salary || 'Not Disclosed',\n    applyLink: j.applyLink || j.url || '',\n    description: j.description || '',\n    source: j.source || 'unknown'\n  }};\n});"
+            }
+        },
+        {
+            "id": "8",
+            "name": "Salary Normalization",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                1300,
+                250
+            ],
+            "parameters": {
+                "functionCode": "return items.map(item => {\n  let salary = item.json.salary || '';\n  salary = salary.replace(/,/g, '').trim();\n  if (/lpa/i.test(salary)) salary = salary.replace(/lpa/i, ' LPA');\n  else if (/₹|rs/i.test(salary)) salary = salary.replace(/rs/i, '₹');\n  else if (/\\$/i.test(salary)) salary = salary.replace(/\\$/g, 'USD ');\n  else if (!salary) salary = 'Not Disclosed';\n  item.json.salaryNormalized = salary;\n  return item;\n});"
+            }
+        },
+        {
+            "id": "11",
+            "name": "Send to GoJob",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                1520,
+                250
+            ],
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:5000/api/admin/webhook/n8n",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer gojob_n8n_secret_123"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "keypair",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "title",
+                            "value": "={{ $json.title }}"
+                        },
+                        {
+                            "name": "company",
+                            "value": "={{ $json.company }}"
+                        },
+                        {
+                            "name": "location",
+                            "value": "={{ $json.location }}"
+                        },
+                        {
+                            "name": "salary",
+                            "value": "={{ $json.salaryNormalized }}"
+                        },
+                        {
+                            "name": "description",
+                            "value": "={{ $json.description }}"
+                        },
+                        {
+                            "name": "applyLink",
+                            "value": "={{ $json.applyLink }}"
+                        },
+                        {
+                            "name": "source",
+                            "value": "={{ $json.source }}"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Schedule Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Remotive Jobs"
+                    }
+                ]
+            ]
+        },
+        "Fetch Remotive Jobs": {
+            "main": [
+                [
+                    {
+                        "node": "Split Remotive"
+                    }
+                ]
+            ]
+        },
+        "Split Remotive": {
+            "main": [
+                [
+                    {
+                        "node": "Merge All Sources",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Telegram Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Telegram Message"
+                    }
+                ]
+            ]
+        },
+        "Parse Telegram Message": {
+            "main": [
+                [
+                    {
+                        "node": "Merge All Sources",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "Merge All Sources": {
+            "main": [
+                [
+                    {
+                        "node": "Normalize Fields"
+                    }
+                ]
+            ]
+        },
+        "Normalize Fields": {
+            "main": [
+                [
+                    {
+                        "node": "Salary Normalization"
+                    }
+                ]
+            ]
+        },
+        "Salary Normalization": {
+            "main": [
+                [
+                    {
+                        "node": "Send to GoJob"
+                    }
+                ]
+            ]
+        }
+    }
+}

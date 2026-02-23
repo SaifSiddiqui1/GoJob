@@ -1,0 +1,185 @@
+{
+    "name": "GoJob - Fetch Jobs & Send to Webhook",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "hours",
+                            "hoursInterval": 4
+                        }
+                    ]
+                }
+            },
+            "id": "1",
+            "name": "Schedule (Every 4 Hours)",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://remotive.com/api/remote-jobs?limit=5",
+                "options": {}
+            },
+            "id": "2",
+            "name": "Fetch Jobs API",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                420,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "fieldToSplitOut": "jobs",
+                "options": {}
+            },
+            "id": "3",
+            "name": "Split into individual jobs",
+            "type": "n8n-nodes-base.itemLists",
+            "typeVersion": 3,
+            "position": [
+                640,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "title_map",
+                            "name": "title",
+                            "value": "={{ $json.title }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "company_map",
+                            "name": "company",
+                            "value": "={{ $json.company_name }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "location_map",
+                            "name": "location",
+                            "value": "={{ $json.candidate_required_location }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "remote_map",
+                            "name": "remote",
+                            "value": "remote",
+                            "type": "string"
+                        },
+                        {
+                            "id": "url_map",
+                            "name": "applyLink",
+                            "value": "={{ $json.url }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "desc_map",
+                            "name": "description",
+                            "value": "={{ $json.title }} at {{ $json.company_name }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "source_map",
+                            "name": "source",
+                            "value": "n8n-imported",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "4",
+            "name": "Format for GoJob",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.2,
+            "position": [
+                860,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:5000/api/admin/webhook/n8n",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer gojob_n8n_secret_123"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ $json }}",
+                "options": {}
+            },
+            "id": "5",
+            "name": "Send to GoJob Admin",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                1080,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Schedule (Every 4 Hours)": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Jobs API",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Jobs API": {
+            "main": [
+                [
+                    {
+                        "node": "Split into individual jobs",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Split into individual jobs": {
+            "main": [
+                [
+                    {
+                        "node": "Format for GoJob",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format for GoJob": {
+            "main": [
+                [
+                    {
+                        "node": "Send to GoJob Admin",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
