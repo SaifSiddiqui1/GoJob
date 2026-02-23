@@ -31,7 +31,7 @@ connectDB();
 // Security Middleware
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: true, // Dynamically reflects the requesting origin (Vercel)
     credentials: true,
 }));
 
