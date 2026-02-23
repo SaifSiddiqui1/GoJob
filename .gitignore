@@ -1,8 +1,17 @@
 node_modules/
 dist/
+dist-ssr/
+
+# Environment Variables
 .env
-.env.local
-.DS_Store
+.env.*
+!.env.example
+
+# Logs
 *.log
+npm-debug.log*
+
+# OS & Hosting Files
+.DS_Store
 .vercel
 .render

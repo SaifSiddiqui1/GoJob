@@ -66,6 +66,15 @@ if (process.env.NODE_ENV !== 'test') {
 // Passport
 app.use(passport.initialize());
 
+// Root route
+app.get('/', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Welcome to the GoJob API',
+        version: '1.0.0'
+    });
+});
+
 // Health check
 app.get('/health', (req, res) => {
     res.json({
