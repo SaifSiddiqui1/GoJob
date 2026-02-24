@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { Camera, Save, MapPin, Mail, Phone, Calendar, User, Briefcase, GraduationCap, Award, Map, PenLine, Code, Terminal, FileText, ChevronRight } from 'lucide-react';
+import { Camera, Save, MapPin, Mail, Phone, Calendar, User, Briefcase, GraduationCap, Award, Map, PenLine, Code, Terminal, FileText, ChevronRight, UploadCloud, Trash2, X } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { userAPI } from '../../services/api';
 import toast from 'react-hot-toast';
@@ -21,6 +21,46 @@ export default function ProfilePage() {
         dateOfBirth: user?.dateOfBirth ? user.dateOfBirth.slice(0, 10) : '',
         profileSummary: user?.profileSummary || '',
     });
+
+    const [modalConfig, setModalConfig] = useState(null); // { type, data, idx }
+    const [uploadingResume, setUploadingResume] = useState(false);
+
+    const handleSaveArrayItem = (type, item, idx) => {
+        const currentArray = [...(user[type] || [])];
+        if (idx !== null && idx !== undefined) currentArray[idx] = item;
+        else currentArray.push(item);
+        updateMutation.mutate({ [type]: currentArray }, { onSuccess: () => setModalConfig(null) });
+    };
+
+    const handleDeleteArrayItem = (type, idx) => {
+        if (!window.confirm('Are you sure you want to delete this item?')) return;
+        const currentArray = [...(user[type] || [])];
+        currentArray.splice(idx, 1);
+        updateMutation.mutate({ [type]: currentArray }, { onSuccess: () => setModalConfig(null) });
+    };
+
+    const handleResumeUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingResume(true);
+        const formData = new FormData();
+        formData.append('resume', file);
+        try {
+            const res = await userAPI.uploadProfileResume(formData);
+            updateUser(res.data.user);
+            toast.success('Resume uploaded!');
+        } catch (err) { toast.error(err.response?.data?.message || 'Upload failed'); }
+        finally { setUploadingResume(false); e.target.value = ''; }
+    };
+
+    const handleDeleteResume = async () => {
+        if (!window.confirm('Are you sure you want to delete your resume?')) return;
+        try {
+            const res = await userAPI.deleteProfileResume();
+            updateUser(res.data.user);
+            toast.success('Resume deleted!');
+        } catch (err) { toast.error('Failed to delete resume'); }
+    };
 
     const updateMutation = useMutation({
         mutationFn: (data) => userAPI.updateProfile(data),
@@ -222,7 +262,7 @@ export default function ProfilePage() {
                             <span className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg"><GraduationCap size={20} /></span>
                             <h2 className="font-heading font-bold text-lg text-gray-900 dark:text-white">Education</h2>
                         </div>
-                        <button className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">Add</button>
+                        <button onClick={() => setModalConfig({ type: 'education', data: {}, idx: null })} className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">Add</button>
                     </div>
 
                     <div className="space-y-6">
@@ -244,7 +284,7 @@ export default function ProfilePage() {
                                                 </p>
                                             )}
                                         </div>
-                                        <button className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-full opacity-0 group-hover:opacity-100 transition-all">
+                                        <button onClick={() => setModalConfig({ type: 'education', data: edu, idx })} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-full opacity-0 group-hover:opacity-100 transition-all">
                                             <PenLine size={16} />
                                         </button>
                                     </div>
@@ -264,7 +304,7 @@ export default function ProfilePage() {
                             <span className="p-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg"><Code size={20} /></span>
                             <h2 className="font-heading font-bold text-lg text-gray-900 dark:text-white">Key Skills</h2>
                         </div>
-                        <button className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:hover:text-primary-400"><PenLine size={16} /></button>
+                        <button onClick={() => setModalConfig({ type: 'skills', data: user?.keySkills?.join(', ') || '', idx: null })} className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:hover:text-primary-400"><PenLine size={16} /></button>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -287,7 +327,7 @@ export default function ProfilePage() {
                             <span className="p-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-lg"><Briefcase size={20} /></span>
                             <h2 className="font-heading font-bold text-lg text-gray-900 dark:text-white">Employment</h2>
                         </div>
-                        <button className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">Add</button>
+                        <button onClick={() => setModalConfig({ type: 'employment', data: {}, idx: null })} className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">Add</button>
                     </div>
 
                     <div className="space-y-6">
@@ -309,7 +349,7 @@ export default function ProfilePage() {
                                                 </p>
                                             )}
                                         </div>
-                                        <button className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-full opacity-0 group-hover:opacity-100 transition-all">
+                                        <button onClick={() => setModalConfig({ type: 'employment', data: emp, idx })} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-full opacity-0 group-hover:opacity-100 transition-all">
                                             <PenLine size={16} />
                                         </button>
                                     </div>
@@ -329,14 +369,14 @@ export default function ProfilePage() {
                             <span className="p-2 bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 rounded-lg"><Terminal size={20} /></span>
                             <h2 className="font-heading font-bold text-lg text-gray-900 dark:text-white">Projects</h2>
                         </div>
-                        <button className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">Add</button>
+                        <button onClick={() => setModalConfig({ type: 'projects', data: {}, idx: null })} className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">Add</button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {user?.projects?.length > 0 ? (
                             user.projects.map((proj, idx) => (
                                 <div key={idx} className="border border-gray-100 dark:border-gray-800 rounded-xl p-4 hover:border-primary-200 dark:hover:border-primary-900/50 transition-colors group relative">
-                                    <button className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-full opacity-0 group-hover:opacity-100 transition-all">
+                                    <button onClick={() => setModalConfig({ type: 'projects', data: proj, idx })} className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-full opacity-0 group-hover:opacity-100 transition-all">
                                         <PenLine size={16} />
                                     </button>
                                     <h3 className="font-bold text-gray-900 dark:text-white text-base pr-8">{proj.title}</h3>
@@ -363,11 +403,160 @@ export default function ProfilePage() {
                         <span className="p-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 rounded-lg"><FileText size={20} /></span>
                         <h2 className="font-heading font-bold text-lg text-gray-900 dark:text-white">Resume</h2>
                     </div>
-                    <p className="text-sm text-gray-500 mb-6">Your resume is the first impression you make on potential employers. Craft it carefully to secure your desired job.</p>
+                    <p className="text-sm text-gray-500 mb-6">Upload your default resume PDF to automatically use it for 1-click job applications.</p>
 
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-gray-50 dark:bg-gray-800/50 text-center">
-                        <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mb-4">Resume viewing and generation features will be available soon.</p>
-                        <button className="btn-secondary text-sm">Upload New Resume</button>
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-gray-50 dark:bg-gray-800/50 text-center flex flex-col items-center">
+                        {user?.profileResume?.url ? (
+                            <div className="w-full flex flex-col items-center text-center">
+                                <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-full mb-3">
+                                    <FileText size={32} className="text-primary-600" />
+                                </div>
+                                <a href={user.profileResume.url} target="_blank" rel="noopener noreferrer" className="text-gray-900 dark:text-white font-bold hover:text-primary-600 transition break-all max-w-[250px] truncate">
+                                    {user.profileResume.originalName || 'My_Resume.pdf'}
+                                </a>
+                                <p className="text-xs text-gray-500 mt-1">Uploaded {new Date(user.profileResume.uploadedAt).toLocaleDateString()}</p>
+
+                                <div className="flex gap-2 mt-4 justify-center">
+                                    <label className="btn-secondary text-sm cursor-pointer whitespace-nowrap">
+                                        {uploadingResume ? 'Replacing...' : 'Replace'}
+                                        <input type="file" accept=".pdf,.doc,.docx" onChange={handleResumeUpload} className="hidden" disabled={uploadingResume} />
+                                    </label>
+                                    <button onClick={handleDeleteResume} className="btn-secondary text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm whitespace-nowrap flex items-center gap-2">
+                                        <Trash2 size={16} /> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="w-full flex flex-col items-center">
+                                <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mb-4">You have not uploaded a default resume.</p>
+                                <label className="btn-primary text-sm cursor-pointer flex items-center justify-center gap-2 max-w-[200px] w-full">
+                                    {uploadingResume ? 'Uploading...' : <><UploadCloud size={18} /> Upload Resume</>}
+                                    <input type="file" accept=".pdf,.doc,.docx" onChange={handleResumeUpload} className="hidden" disabled={uploadingResume} />
+                                </label>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* MODAL SYSTEM */}
+                {modalConfig && (
+                    <ArrayModal
+                        config={modalConfig}
+                        onClose={() => setModalConfig(null)}
+                        onSave={handleSaveArrayItem}
+                        onDelete={handleDeleteArrayItem}
+                        isPending={updateMutation.isPending}
+                    />
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── HELPER COMPONENTS ─── //
+
+function ArrayModal({ config, onClose, onSave, onDelete, isPending }) {
+    const { type, data, idx } = config;
+    const isEditing = idx !== null;
+    const [localForm, setLocalForm] = useState(data || {});
+
+    // For Skills (comma separated string instead of object)
+    if (type === 'skills') {
+        const handleSaveSkills = (e) => {
+            e.preventDefault();
+            const skillsArray = typeof localForm === 'string' ? localForm.split(',').map(s => s.trim()).filter(Boolean) : [];
+            onSave('keySkills', skillsArray); // Replace the entire array
+        };
+        return (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+                    <div className="px-6 py-4 border-b flex justify-between items-center"><h3 className="font-bold">Key Skills</h3><button onClick={onClose}><X size={20} /></button></div>
+                    <form onSubmit={handleSaveSkills} className="p-6">
+                        <label className="label">Add skills separated by commas</label>
+                        <input value={localForm} onChange={e => setLocalForm(e.target.value)} className="input" placeholder="e.g. Java, React, SQL" autoFocus />
+                        <div className="flex justify-end gap-2 mt-6">
+                            <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+                            <button type="submit" disabled={isPending} className="btn-primary">{isPending ? 'Saving...' : 'Save'}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
+    // Generic Modal wrapper for objects
+    const handleChange = (e) => {
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        setLocalForm(p => ({ ...p, [e.target.name]: value }));
+    };
+
+    const handleSave = (e) => {
+        e.preventDefault();
+        onSave(type, localForm, idx);
+    };
+
+    const formatISODate = (isoStr) => isoStr ? isoStr.substring(0, 10) : '';
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200 relative">
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="px-6 py-4 border-b dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/20">
+                    <h3 className="font-bold text-lg text-gray-900 dark:text-white capitalize">{isEditing ? 'Edit' : 'Add'} {type}</h3>
+                    <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition"><X size={20} /></button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6">
+                    <form id="array-form" onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                        {type === 'education' && (
+                            <>
+                                <div className="col-span-1 sm:col-span-2"><label className="label">Degree / Course</label><input required name="degree" value={localForm.degree || ''} onChange={handleChange} className="input" placeholder="e.g. B.Tech in Computer Science" /></div>
+                                <div className="col-span-1 sm:col-span-2"><label className="label">Institution</label><input required name="institution" value={localForm.institution || ''} onChange={handleChange} className="input" placeholder="e.g. IIT Delhi" /></div>
+                                <div><label className="label">Year of Passing</label><input type="number" name="yearOfPassing" value={localForm.yearOfPassing || ''} onChange={handleChange} className="input" placeholder="e.g. 2024" /></div>
+                                <div><label className="label">Score / Percentage</label><input type="number" name="scorePercentage" value={localForm.scorePercentage || ''} onChange={handleChange} className="input" placeholder="e.g. 85.5" /></div>
+                            </>
+                        )}
+
+                        {type === 'employment' && (
+                            <>
+                                <div className="col-span-1 sm:col-span-2"><label className="label">Job Title / Designation</label><input required name="designation" value={localForm.designation || ''} onChange={handleChange} className="input" placeholder="e.g. Software Engineer" /></div>
+                                <div className="col-span-1 sm:col-span-2"><label className="label">Company Name</label><input required name="company" value={localForm.company || ''} onChange={handleChange} className="input" placeholder="e.g. Google" /></div>
+                                <div><label className="label">Start Date</label><input type="date" required name="startDate" value={formatISODate(localForm.startDate)} onChange={handleChange} className="input" /></div>
+                                <div><label className="label">End Date</label><input type="date" name="endDate" value={formatISODate(localForm.endDate)} onChange={handleChange} disabled={localForm.isCurrent} className="input disabled:opacity-50" /></div>
+                                <div className="col-span-1 sm:col-span-2 flex items-center gap-2 mt-1 mb-2">
+                                    <input type="checkbox" id="isCurrent" name="isCurrent" checked={localForm.isCurrent || false} onChange={handleChange} className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500" />
+                                    <label htmlFor="isCurrent" className="text-sm text-gray-700 dark:text-gray-300">I currently work here</label>
+                                </div>
+                                <div className="col-span-1 sm:col-span-2"><label className="label">Description</label><textarea name="description" value={localForm.description || ''} onChange={handleChange} className="input min-h-[100px]" placeholder="Key responsibilities and achievements..." /></div>
+                            </>
+                        )}
+
+                        {type === 'projects' && (
+                            <>
+                                <div className="col-span-1 sm:col-span-2"><label className="label">Project Title</label><input required name="title" value={localForm.title || ''} onChange={handleChange} className="input" placeholder="e.g. E-Commerce Platform" /></div>
+                                <div><label className="label">Start Date</label><input type="date" name="startDate" value={formatISODate(localForm.startDate)} onChange={handleChange} className="input" /></div>
+                                <div><label className="label">End Date</label><input type="date" name="endDate" value={formatISODate(localForm.endDate)} onChange={handleChange} disabled={localForm.isOngoing} className="input disabled:opacity-50" /></div>
+                                <div className="col-span-1 sm:col-span-2 flex items-center gap-2 mt-1 mb-2">
+                                    <input type="checkbox" id="isOngoing" name="isOngoing" checked={localForm.isOngoing || false} onChange={handleChange} className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500" />
+                                    <label htmlFor="isOngoing" className="text-sm text-gray-700 dark:text-gray-300">This project is ongoing</label>
+                                </div>
+                                <div className="col-span-1 sm:col-span-2"><label className="label">Description</label><textarea name="description" value={localForm.description || ''} onChange={handleChange} className="input min-h-[100px]" placeholder="What problem did it solve? What technologies were used?" /></div>
+                            </>
+                        )}
+
+                    </form>
+                </div>
+
+                <div className="px-6 py-4 border-t dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20 flex justify-between items-center">
+                    {isEditing ? (
+                        <button type="button" onClick={() => onDelete(type, idx)} className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"><Trash2 size={16} /> Delete</button>
+                    ) : <div></div>}
+
+                    <div className="flex gap-3">
+                        <button type="button" onClick={onClose} className="btn-secondary text-sm">Cancel</button>
+                        <button type="submit" form="array-form" disabled={isPending} className="btn-primary flex items-center gap-2 text-sm">
+                            {isPending ? 'Saving...' : <><Save size={16} /> Save</>}
+                        </button>
                     </div>
                 </div>
 

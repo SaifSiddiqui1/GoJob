@@ -106,6 +106,12 @@ const userSchema = new mongoose.Schema({
 
     academicAchievements: [{ type: String }],
 
+    profileResume: {
+        url: { type: String },
+        originalName: { type: String },
+        uploadedAt: { type: Date }
+    },
+
     // Profile completion score
     profileCompleteness: { type: Number, default: 0 },
 
