@@ -3,7 +3,7 @@ const User = require('../models/User');
 const { generateToken } = require('../middleware/auth');
 const { sendEmail } = require('../services/emailService');
 const passport = require('passport');
-const { isValidPhoneNumber, parsePhoneNumber } = require('libphonenumber-js');
+const validateGlobalPhone = require('../utils/validatePhone');
 
 // Helper: generate 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -21,15 +21,11 @@ exports.register = async (req, res, next) => {
         }
 
         // Phone Number Validation
+        let validContactNumber = null;
         if (contactNumber) {
-            try {
-                // If it doesn't start with '+', assume India as default for local formats
-                const numStr = contactNumber.startsWith('+') ? contactNumber : `+91${contactNumber}`;
-                if (!isValidPhoneNumber(numStr)) {
-                    return res.status(400).json({ success: false, message: 'Please provide a valid, real contact number.' });
-                }
-            } catch (err) {
-                return res.status(400).json({ success: false, message: 'Invalid contact number format.' });
+            validContactNumber = validateGlobalPhone(contactNumber);
+            if (!validContactNumber) {
+                return res.status(400).json({ success: false, message: 'Please provide a valid, non-repeating real contact number.' });
             }
         }
 
@@ -38,7 +34,7 @@ exports.register = async (req, res, next) => {
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
         const user = await User.create({
-            fullName, username, email, password, contactNumber, dateOfBirth,
+            fullName, username, email, password, contactNumber: validContactNumber, dateOfBirth,
             otp, otpExpires,
         });
 

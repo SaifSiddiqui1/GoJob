@@ -35,7 +35,15 @@ export default function SignupPage() {
 
         if (form.contactNumber) {
             try {
+                // If it doesn't start with '+', assume India as default for local formats
                 const numStr = form.contactNumber.startsWith('+') ? form.contactNumber : `+91${form.contactNumber}`
+
+                // Reject obvious fake repeating patterns matching the backend logic
+                const digitsOnly = numStr.replace(/\D/g, '')
+                if (/^(\d)\1{7,}$/.test(digitsOnly)) {
+                    return toast.error('Please provide a valid, non-repeating real contact number.')
+                }
+
                 if (!isValidPhoneNumber(numStr)) {
                     return toast.error('Please provide a valid, real contact number.')
                 }
