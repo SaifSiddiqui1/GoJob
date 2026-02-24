@@ -62,6 +62,7 @@ router.post('/resume', protect, uploadResume.single('resume'), async (req, res, 
         if (!req.file) return res.status(400).json({ success: false, message: 'No file provided.' });
         const result = await uploadBuffer(req.file.buffer, {
             folder: `gojob/resumes_profile/${req.user._id}`,
+            public_id: req.file.originalname,
             resource_type: 'raw',
         });
         const resumeData = { url: result.secure_url, originalName: req.file.originalname, uploadedAt: new Date() };
@@ -83,7 +84,7 @@ router.post('/resume', protect, uploadResume.single('resume'), async (req, res, 
 // Delete profile resume
 router.delete('/resume', protect, async (req, res, next) => {
     try {
-        const user = await User.findByIdAndUpdate(req.user._id, { $unset: { profileResume: 1 } }, { new: true });
+        const user = await User.findByIdAndUpdate(req.user._id, { $set: { profileResume: null } }, { new: true });
         res.json({ success: true, message: 'Resume deleted successfully!', data: { user } });
     } catch (err) { next(err); }
 });
