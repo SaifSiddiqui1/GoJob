@@ -18,7 +18,7 @@ router.get('/key', (req, res) => {
 // Create an order
 router.post('/create-order', protect, async (req, res, next) => {
     try {
-        const amount = 99 * 100; // ₹99 in paise
+        const amount = 1 * 100; // ₹1 in paise
 
         const options = {
             amount: amount,
