@@ -41,7 +41,72 @@ const userSchema = new mongoose.Schema({
     // Saved jobs
     savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Job' }],
 
-    // Profile completion
+    // ─── NAUKRI-STYLE ADVANCED PROFILE FIELDS ───
+
+    profileSummary: { type: String, maxLength: 2000 },
+
+    careerPreferences: {
+        preferredJobType: { type: String, enum: ['Full Time', 'Part Time', 'Contract', 'Freelance', 'Internship'] },
+        availabilityToWork: { type: String, enum: ['15 Days or less', '1 Month', '2 Months', '3 Months', 'Immediately'] },
+        preferredLocations: [{ type: String }],
+    },
+
+    education: [{
+        degree: { type: String }, // e.g., 'MCA', 'BCA', 'Class XII'
+        institution: { type: String }, // e.g., 'Jamia Milia Islamia (JMI)'
+        yearOfPassing: { type: Number }, // e.g., 2026
+        isFullTime: { type: Boolean, default: true },
+        board: { type: String }, // For Class X/XII (e.g., 'CBSE')
+        medium: { type: String }, // e.g., 'English'
+        scorePercentage: { type: Number }, // e.g., 91.2
+    }],
+
+    keySkills: [{ type: String }], // e.g., ['Java', 'Spring Boot', 'SQL']
+
+    languages: [{
+        language: { type: String }, // e.g., 'English'
+        canRead: { type: Boolean, default: false },
+        canWrite: { type: Boolean, default: false },
+        canSpeak: { type: Boolean, default: false },
+    }],
+
+    internships: [{
+        company: { type: String },
+        role: { type: String },
+        startDate: { type: Date },
+        endDate: { type: Date },
+        isCurrent: { type: Boolean, default: false },
+        description: { type: String },
+    }],
+
+    employment: [{
+        company: { type: String },
+        designation: { type: String },
+        startDate: { type: Date },
+        endDate: { type: Date },
+        isCurrent: { type: Boolean, default: false },
+        description: { type: String },
+    }],
+
+    projects: [{
+        title: { type: String }, // e.g., 'Atm Database Management System'
+        startDate: { type: Date },
+        endDate: { type: Date },
+        isOngoing: { type: Boolean, default: false },
+        description: { type: String },
+        link: { type: String }, // Optional GitHub/Live link
+    }],
+
+    accomplishments: {
+        certifications: [{ title: String, issuer: String, dateCompleted: Date }],
+        awards: [{ title: String, issuer: String, dateReceived: Date }],
+        competitiveExams: [{ examName: String, rankOrScore: String, year: Number }],
+        clubAndCommittees: [{ position: String, clubName: String, duration: String }],
+    },
+
+    academicAchievements: [{ type: String }],
+
+    // Profile completion score
     profileCompleteness: { type: Number, default: 0 },
 
     isActive: { type: Boolean, default: true },
@@ -65,11 +130,39 @@ userSchema.methods.isPremiumActive = function () {
     return this.isPremium && this.premiumExpiresAt > new Date();
 };
 
-// Calculate profile completeness
+// Calculate profile completeness (Updated for Naukri-like layout)
 userSchema.methods.calcProfileCompleteness = function () {
-    const fields = ['fullName', 'email', 'contactNumber', 'gender', 'location', 'currentStatus', 'photo', 'dateOfBirth'];
-    const filled = fields.filter(f => this[f]).length;
-    return Math.round((filled / fields.length) * 100);
+    // We compute a weighted score based on essential and advanced sections being populated
+    let score = 0;
+    const maxScore = 100;
+
+    // Basic Info (30% total)
+    if (this.fullName) score += 5;
+    if (this.email) score += 5;
+    if (this.contactNumber) score += 5;
+    if (this.gender) score += 5;
+    if (this.location) score += 5;
+    if (this.photo) score += 5;
+
+    // Advanced Info (70% total)
+    if (this.profileSummary && this.profileSummary.length > 30) score += 10;
+
+    if (this.education && this.education.length > 0) score += 15;
+    if (this.keySkills && this.keySkills.length > 0) score += 15;
+
+    if (this.careerPreferences && this.careerPreferences.preferredLocations && this.careerPreferences.preferredLocations.length > 0) score += 10;
+
+    if (this.languages && this.languages.length > 0) score += 5;
+
+    if (
+        (this.internships && this.internships.length > 0) ||
+        (this.employment && this.employment.length > 0) ||
+        (this.projects && this.projects.length > 0)
+    ) {
+        score += 15; // User has some form of experience/projects
+    }
+
+    return Math.min(score, maxScore);
 };
 
 module.exports = mongoose.model('User', userSchema);

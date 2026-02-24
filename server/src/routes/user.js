@@ -15,7 +15,15 @@ router.get('/profile', protect, async (req, res, next) => {
 // Update profile
 router.put('/profile', protect, async (req, res, next) => {
     try {
-        const allowedFields = ['fullName', 'gender', 'location', 'currentStatus', 'dateOfBirth', 'darkMode', 'preferredLanguage', 'locationBasedJobs', 'jobAlerts'];
+        const allowedFields = [
+            'fullName', 'gender', 'location', 'currentStatus', 'dateOfBirth', 'darkMode',
+            'preferredLanguage', 'locationBasedJobs', 'jobAlerts',
+            // Naukri-style advanced fields
+            'profileSummary', 'careerPreferences', 'education', 'keySkills',
+            'languages', 'internships', 'employment', 'projects',
+            'accomplishments', 'academicAchievements'
+        ];
+
         const updates = {};
         allowedFields.forEach(f => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
 
@@ -24,9 +32,12 @@ router.put('/profile', protect, async (req, res, next) => {
             updates.pendingContactChange = req.body.contactNumber;
         }
 
-        const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
+        let user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
+
+        // Recalculate and save completion score based on new fields
         user.profileCompleteness = user.calcProfileCompleteness();
         await user.save({ validateBeforeSave: false });
+
         res.json({ success: true, data: { user } });
     } catch (err) { next(err); }
 });
