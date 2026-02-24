@@ -18,6 +18,20 @@ export default function SignupPage() {
 
     const handleRegister = async (e) => {
         e.preventDefault()
+
+        if (form.dateOfBirth) {
+            const birthDate = new Date(form.dateOfBirth)
+            const today = new Date()
+            let age = today.getFullYear() - birthDate.getFullYear()
+            const m = today.getMonth() - birthDate.getMonth()
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--
+            }
+            if (age < 15) {
+                return toast.error('You need to be of valid age that is 15 years, wait few years and then comeback.')
+            }
+        }
+
         setLoading(true)
         try {
             const res = await authAPI.register(form)
@@ -141,6 +155,7 @@ export default function SignupPage() {
                                 <div>
                                     <label className="label text-white/80">Date of Birth</label>
                                     <input name="dateOfBirth" value={form.dateOfBirth} onChange={handleChange} type="date"
+                                        max={new Date().toISOString().split('T')[0]}
                                         className="input bg-white/10 border-white/20 text-white" />
                                 </div>
                             </div>
