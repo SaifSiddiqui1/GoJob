@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, User, Phone, Calendar, ArrowRight } from 'lucide-react'
+import { Lock, Mail, Phone, User, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { authAPI } from '../../services/api'
 import useAuthStore from '../../store/authStore'
 import toast from 'react-hot-toast'
+import { isValidPhoneNumber } from 'libphonenumber-js'
 
 export default function SignupPage() {
     const navigate = useNavigate()
@@ -29,6 +30,17 @@ export default function SignupPage() {
             }
             if (age < 15) {
                 return toast.error('You need to be of valid age that is 15 years, wait few years and then comeback.')
+            }
+        }
+
+        if (form.contactNumber) {
+            try {
+                const numStr = form.contactNumber.startsWith('+') ? form.contactNumber : `+91${form.contactNumber}`
+                if (!isValidPhoneNumber(numStr)) {
+                    return toast.error('Please provide a valid, real contact number.')
+                }
+            } catch (err) {
+                return toast.error('Invalid contact number format.')
             }
         }
 

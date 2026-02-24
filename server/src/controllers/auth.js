@@ -3,6 +3,7 @@ const User = require('../models/User');
 const { generateToken } = require('../middleware/auth');
 const { sendEmail } = require('../services/emailService');
 const passport = require('passport');
+const { isValidPhoneNumber, parsePhoneNumber } = require('libphonenumber-js');
 
 // Helper: generate 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -17,6 +18,19 @@ exports.register = async (req, res, next) => {
         }
         if (await User.findOne({ username })) {
             return res.status(400).json({ success: false, message: 'Username already taken.' });
+        }
+
+        // Phone Number Validation
+        if (contactNumber) {
+            try {
+                // If it doesn't start with '+', assume India as default for local formats
+                const numStr = contactNumber.startsWith('+') ? contactNumber : `+91${contactNumber}`;
+                if (!isValidPhoneNumber(numStr)) {
+                    return res.status(400).json({ success: false, message: 'Please provide a valid, real contact number.' });
+                }
+            } catch (err) {
+                return res.status(400).json({ success: false, message: 'Invalid contact number format.' });
+            }
         }
 
         // Generate email verification OTP
