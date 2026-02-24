@@ -83,7 +83,7 @@ router.post('/upload', protect, uploadResume.single('resume'), async (req, res, 
     } catch (err) { next(err); }
 });
 
-// Download resume — returns a print-ready HTML page; user Ctrl+P → Save as PDF
+// Download resume — generates a PDF via Puppeteer and sends it as an attachment
 router.get('/:id/download', protect, async (req, res, next) => {
     try {
         const { user } = req;
@@ -115,8 +115,42 @@ router.get('/:id/download', protect, async (req, res, next) => {
 
         // Generate print-ready HTML page using the chosen template
         const html = generateTemplateHTML(resume, resume.templateId || 'classic');
-        res.set('Content-Type', 'text/html; charset=utf-8');
-        return res.send(html);
+
+        try {
+            const puppeteer = require('puppeteer');
+            const browser = await puppeteer.launch({
+                headless: 'new',
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+            const page = await browser.newPage();
+            // Inject the clean HTML
+            await page.setContent(html, { waitUntil: 'networkidle0' });
+            // Hide the print bar that tells users to "Save as PDF" since we are rendering it natively
+            await page.addStyleTag({ content: '.print-bar { display: none !important; }' });
+
+            const pdfBuffer = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '0', right: '0', bottom: '0', left: '0' }
+            });
+            await browser.close();
+
+            const fileName = `${resume.personalInfo?.fullName?.replace(/\s+/g, '_') || 'Resume'}.pdf`;
+
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment; filename="${fileName}"`,
+                'Content-Length': pdfBuffer.length
+            });
+            return res.send(pdfBuffer);
+
+        } catch (pupErr) {
+            console.error('Puppeteer PDF generation failed:', pupErr);
+            // Fallback to giving them the HTML if the PDF engine crashed
+            res.set('Content-Type', 'text/html; charset=utf-8');
+            return res.send(html);
+        }
+
     } catch (err) { next(err); }
 });
 

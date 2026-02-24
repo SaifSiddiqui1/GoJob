@@ -20,29 +20,38 @@ export default function ResumePage() {
 
     const handleDownload = async (resume) => {
         try {
-            // Track the download server-side
+            const toastId = toast.loading('Generating PDF...', { id: 'pdf-toast' })
+
+            // Track the download server-side API logic
             await resumeAPI.trackDownload(resume._id)
-            // Open the print-ready page in a new tab — user can Save as PDF via browser print dialog
+
+            // Fetch the PDF blob
             const token = useAuthStore.getState().token
             const printUrl = `/api/resume/${resume._id}/download`
-            // Use fetch to get HTML and open in new tab (to pass auth header)
-            const response = await fetch(printUrl, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${printUrl}`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
+
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}))
-                toast.error(err.message || 'Download limit reached')
+                toast.error(err.message || 'Download limit reached', { id: toastId })
                 return
             }
-            const html = await response.text()
-            const blob = new Blob([html], { type: 'text/html' })
-            const url = URL.createObjectURL(blob)
-            const win = window.open(url, '_blank')
-            if (win) { win.focus(); toast.success('📄 Resume opened — click "Save as PDF" to download') }
-            else toast('If popup was blocked, allow popups for this site', { icon: '⚠️' })
-            setTimeout(() => URL.revokeObjectURL(url), 5000)
+
+            // Convert to BLOB and trigger true download
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${resume.personalInfo?.fullName?.replace(/\s+/g, '_') || 'Resume'}.pdf`
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            window.URL.revokeObjectURL(url)
+
+            toast.success('Resume downloaded!', { id: toastId })
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Download failed')
+            toast.error(err.response?.data?.message || 'Download failed', { id: 'pdf-toast' })
         }
     }
 
