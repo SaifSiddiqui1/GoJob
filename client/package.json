@@ -18,6 +18,7 @@
     "html2pdf.js": "^0.14.0",
     "libphonenumber-js": "^1.12.37",
     "lucide-react": "^0.575.0",
+    "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-dropzone": "^15.0.0",
