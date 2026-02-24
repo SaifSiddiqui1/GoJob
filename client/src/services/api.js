@@ -92,6 +92,9 @@ export const aiAPI = {
     analyzeSkillGap: (data) => api.post('/ai/skill-gap', data),
     generateBio: (data) => api.post('/ai/generate-bio', data),
     getInterviewQuestions: (data) => api.post('/ai/interview-questions', data),
+    optimizeLinkedInProfile: (data) => api.post('/ai/linkedin-optimizer', data),
+    adviseCareerPath: (data) => api.post('/ai/career-path', data),
+    summarizeJobDescription: (data) => api.post('/ai/job-summarizer', data),
 }
 
 // ─── Study ────────────────────────────────────────────────────
@@ -122,6 +125,13 @@ export const toolsAPI = {
     generateBio: (data) => api.post('/tools/bio', data),
     resizePhoto: (formData) => api.post('/tools/resize-photo', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
     salaryCalc: (data) => api.post('/tools/salary-calculator', data),
+}
+
+// ─── Payment ──────────────────────────────────────────────────
+export const paymentAPI = {
+    getKey: () => api.get('/payment/key'),
+    createOrder: () => api.post('/payment/create-order'),
+    verifyPayment: (data) => api.post('/payment/verify', data)
 }
 
 export default api

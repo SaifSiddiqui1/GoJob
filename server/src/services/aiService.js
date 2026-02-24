@@ -188,6 +188,82 @@ Return JSON ONLY:
     return JSON.parse(jsonMatch[0]);
 };
 
+/**
+ * Analyze this resume data to optimize the candidate's LinkedIn profile.
+ */
+const optimizeLinkedInProfile = async (resumeData) => {
+    const prompt = `
+Analyze this resume data and provide specific, actionable suggestions to optimize the candidate's LinkedIn profile.
+
+Profile Summary: ${resumeData.personalInfo?.fullName}
+Skills: ${JSON.stringify(resumeData.skills)}
+Experience: ${resumeData.experience?.map(e => `${e.position} at ${e.company}: ${e.description}`).join('; ')}
+
+Return JSON ONLY:
+{
+  "headlineSuggestions": ["Option 1", "Option 2", "Option 3"],
+  "aboutSection": "<A 3-4 sentence engaging LinkedIn 'About' summary>",
+  "keywordsToHighlight": ["keyword1", "keyword2", "keyword3"],
+  "networkingTips": ["tip1", "tip2"]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const jsonMatch = result.response.text().match(/\{[\s\S]*\}/);
+    return JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+};
+
+/**
+ * Act as a senior career coach and provide a career path roadmap
+ */
+const adviseCareerPath = async (resumeData) => {
+    const prompt = `
+Act as a senior career coach. Based on this resume, provide a comprehensive structured career trajectory.
+
+Current Role: ${resumeData.currentStatus}
+Skills: ${JSON.stringify(resumeData.skills)}
+Degree/Education: ${JSON.stringify(resumeData.education)}
+
+Return JSON ONLY:
+{
+  "nextLogicalRole": "<Job Title>",
+  "estimatedSalaryJump": "<Percentage or generic tier>",
+  "roadmap": [
+    { "step": "Short-term (0-6 mo)", "action": "Specific skill acquisition or project" },
+    { "step": "Medium-term (1-2 yrs)", "action": "Specific promotion or pivot target" },
+    { "step": "Long-term (3-5 yrs)", "action": "Ultimate career goal" }
+  ],
+  "certificationsToPursue": ["Cert 1", "Cert 2"],
+  "alternativePivots": ["Role A", "Role B"]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const jsonMatch = result.response.text().match(/\{[\s\S]*\}/);
+    return JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+};
+
+/**
+ * Summarize a long job description down to its core requirements
+ */
+const summarizeJobDescription = async (jobDescription) => {
+    const prompt = `
+Read this long, complicated job description and distil it down to its core requirements.
+
+Job Description:
+${jobDescription}
+
+Return JSON ONLY:
+{
+  "coreFocus": "<1 sentence on what this person will actually do daily>",
+  "mandatoryRequirements": ["req1", "req2", "req3", "req4"],
+  "niceToHave": ["bonus 1", "bonus 2"],
+  "redFlags": ["If any, suspicious expectations from the JD. If none, say 'None detected'"]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const jsonMatch = result.response.text().match(/\{[\s\S]*\}/);
+    return JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+};
+
 module.exports = {
     checkAtsScore,
     enhanceResume,
@@ -196,4 +272,7 @@ module.exports = {
     analyzeSkillGap,
     generateBio,
     generateInterviewQuestions,
+    optimizeLinkedInProfile,
+    adviseCareerPath,
+    summarizeJobDescription
 };

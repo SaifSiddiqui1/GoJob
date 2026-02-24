@@ -97,5 +97,39 @@ router.post('/interview-questions', protect, async (req, res, next) => {
         res.json({ success: true, data: questions });
     } catch (err) { next(err); }
 });
+// LinkedIn Optimizer (Premium)
+router.post('/linkedin-optimizer', protect, premiumOrAdmin, async (req, res, next) => {
+    try {
+        const { resumeId } = req.body;
+        const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
+        if (!resume) return res.status(404).json({ success: false, message: 'Resume not found.' });
+
+        const optimization = await aiService.optimizeLinkedInProfile(resume.toObject());
+        res.json({ success: true, data: optimization });
+    } catch (err) { next(err); }
+});
+
+// Career Path Advisor (Premium)
+router.post('/career-path', protect, premiumOrAdmin, async (req, res, next) => {
+    try {
+        const { resumeId } = req.body;
+        const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
+        if (!resume) return res.status(404).json({ success: false, message: 'Resume not found.' });
+
+        const careerPath = await aiService.adviseCareerPath(resume.toObject());
+        res.json({ success: true, data: careerPath });
+    } catch (err) { next(err); }
+});
+
+// Job Description Summarizer (Premium)
+router.post('/job-summarizer', protect, premiumOrAdmin, async (req, res, next) => {
+    try {
+        const { jobDescription } = req.body;
+        if (!jobDescription) return res.status(400).json({ success: false, message: 'Job description is required.' });
+
+        const summary = await aiService.summarizeJobDescription(jobDescription);
+        res.json({ success: true, data: summary });
+    } catch (err) { next(err); }
+});
 
 module.exports = router;

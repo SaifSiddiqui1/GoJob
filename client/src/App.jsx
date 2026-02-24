@@ -25,6 +25,7 @@ import JobsPage from './pages/dashboard/JobsPage'
 import JobDetailPage from './pages/dashboard/JobDetailPage'
 import StudyPage from './pages/dashboard/StudyPage'
 import ToolsPage from './pages/dashboard/ToolsPage'
+import AIToolsPage from './pages/dashboard/AIToolsPage'
 import SettingsPage from './pages/dashboard/SettingsPage'
 
 // Admin pages
@@ -88,6 +89,7 @@ export default function App() {
           <Route path="jobs/:id" element={<JobDetailPage />} />
           <Route path="study" element={<StudyPage />} />
           <Route path="tools" element={<ToolsPage />} />
+          <Route path="ai-tools" element={<AIToolsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 

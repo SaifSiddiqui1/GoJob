@@ -97,6 +97,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/study', studyRoutes);
 app.use('/api/tools', toolRoutes);
+app.use('/api/payment', require('./routes/payment'));
 
 // 404 handler
 app.use((req, res) => {

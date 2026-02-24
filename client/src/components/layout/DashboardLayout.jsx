@@ -2,9 +2,10 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import {
     LayoutDashboard, User, FileText, Briefcase, BookOpen,
-    Wrench, Settings, LogOut, Menu, X, ChevronRight, Crown, Bell, Check
+    Wrench, Settings, LogOut, Menu, X, ChevronRight, Crown, Bell, Check, Sparkles
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
+import PremiumModal from '../ui/PremiumModal'
 
 const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -13,6 +14,7 @@ const navItems = [
     { to: '/dashboard/jobs', label: 'Jobs', icon: Briefcase },
     { to: '/dashboard/study', label: 'Study Materials', icon: BookOpen },
     { to: '/dashboard/tools', label: 'Tools', icon: Wrench },
+    { to: '/dashboard/ai-tools', label: 'AI Suite', icon: Sparkles },
     { to: '/dashboard/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -140,50 +142,7 @@ export default function DashboardLayout() {
             </div>
 
             {/* Premium Upgrade Modal */}
-            {premiumModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 dark:border-gray-800 animate-fade-in">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                                <Crown size={22} className="text-amber-500" />
-                                <h2 className="font-heading font-bold text-xl text-gray-900 dark:text-white">GoJob Premium</h2>
-                            </div>
-                            <button onClick={() => setPremiumModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-                                <X size={18} className="text-gray-500" />
-                            </button>
-                        </div>
-
-                        <div className="text-center mb-5">
-                            <div className="text-4xl font-heading font-bold text-gray-900 dark:text-white">₹99<span className="text-sm text-gray-400 font-normal">/month</span></div>
-                            <p className="text-xs text-gray-400 mt-1">Cancel anytime · No hidden charges</p>
-                        </div>
-
-                        <ul className="space-y-2 mb-5">
-                            {[
-                                'Unlimited resume downloads',
-                                'AI resume enhancement (unlimited)',
-                                'Priority ATS score checks',
-                                'Cover letter generator (unlimited)',
-                                'Advanced skill gap analysis',
-                                'Premium job alerts by email',
-                            ].map(f => (
-                                <li key={f} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                    <Check size={14} className="text-green-500 flex-shrink-0" /> {f}
-                                </li>
-                            ))}
-                        </ul>
-
-                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-xs text-amber-700 dark:text-amber-300 mb-4">
-                            💳 To upgrade, send ₹99 via UPI to <strong>gojob@upi</strong> and email your transaction ID to <strong>premium@gojob.app</strong>. Your account will be upgraded within 24 hours.
-                        </div>
-
-                        <button onClick={() => { setPremiumModal(false); window.open('mailto:premium@gojob.app?subject=Premium Upgrade&body=Hi, I have sent ₹99 via UPI. My transaction ID is: ', '_blank') }}
-                            className="btn-primary w-full flex items-center justify-center gap-2">
-                            <Crown size={15} /> Upgrade Now
-                        </button>
-                    </div>
-                </div>
-            )}
+            <PremiumModal isOpen={premiumModal} onClose={() => setPremiumModal(false)} />
         </div>
     )
 }
