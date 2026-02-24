@@ -50,7 +50,7 @@ export default function LoginPage() {
                 <div className="glass rounded-2xl p-8 space-y-5">
                     {/* Social auth */}
                     <div className="grid grid-cols-2 gap-3">
-                        <a href="/api/auth/google"
+                        <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/google`}
                             className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors border border-white/20">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -60,7 +60,7 @@ export default function LoginPage() {
                             </svg>
                             Google
                         </a>
-                        <a href="/api/auth/github"
+                        <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/github`}
                             className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors border border-white/20">
                             <Github size={16} />
                             GitHub

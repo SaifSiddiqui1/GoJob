@@ -80,11 +80,11 @@ export default function SignupPage() {
                         <form onSubmit={handleRegister} className="space-y-4">
                             {/* Social auth */}
                             <div className="grid grid-cols-2 gap-3">
-                                <a href="/api/auth/google" className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors border border-white/20">
+                                <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/google`} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors border border-white/20">
                                     <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
                                     Google
                                 </a>
-                                <a href="/api/auth/github" className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors border border-white/20">
+                                <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/github`} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors border border-white/20">
                                     <span className="text-base">⌥</span>
                                     GitHub
                                 </a>
