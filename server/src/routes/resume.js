@@ -113,47 +113,16 @@ router.get('/:id/download', protect, async (req, res, next) => {
             await user.constructor.findByIdAndUpdate(user._id, { $inc: { resumeDownloadsUsed: 1 } });
         }
 
-        // If resume is an uploaded file, redirect to stored URL
+        const fileName = `${resume.personalInfo?.fullName?.replace(/\s+/g, '_') || 'Resume'}.pdf`;
+
+        // If resume is an uploaded file, return the URL
         if (resume.uploadedFileUrl) {
-            return res.redirect(resume.uploadedFileUrl);
+            return res.json({ success: true, isUrl: true, url: resume.uploadedFileUrl, fileName });
         }
 
         // Generate print-ready HTML page using the chosen template
         const html = generateTemplateHTML(resume, resume.templateId || 'classic');
-
-        try {
-            const puppeteer = require('puppeteer');
-            const browser = await puppeteer.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
-            const page = await browser.newPage();
-            // Inject the clean HTML
-            await page.setContent(html, { waitUntil: 'networkidle0' });
-            // Hide the print bar that tells users to "Save as PDF" since we are rendering it natively
-            await page.addStyleTag({ content: '.print-bar { display: none !important; }' });
-
-            const pdfBuffer = await page.pdf({
-                format: 'A4',
-                printBackground: true,
-                margin: { top: '0', right: '0', bottom: '0', left: '0' }
-            });
-            await browser.close();
-
-            const fileName = `${resume.personalInfo?.fullName?.replace(/\s+/g, '_') || 'Resume'}.pdf`;
-
-            res.set({
-                'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="${fileName}"`,
-                'Content-Length': pdfBuffer.length
-            });
-            return res.send(pdfBuffer);
-
-        } catch (pupErr) {
-            console.error('Puppeteer PDF generation failed:', pupErr);
-            // Send a 500 error instead of HTML so the frontend doesn't download an HTML file disguised as a PDF
-            return res.status(500).json({ success: false, message: 'Server failed to natively generate the PDF file natively due to Chrome engine error.' });
-        }
+        return res.json({ success: true, isUrl: false, html, fileName });
 
     } catch (err) { next(err); }
 });

@@ -58,7 +58,8 @@
             ],
             "parameters": {
                 "updates": [
-                    "message"
+                    "message",
+                    "channel_post"
                 ]
             },
             "credentials": {
@@ -77,7 +78,7 @@
                 400
             ],
             "parameters": {
-                "functionCode": "const text = $json.message.text || '';\nfunction extract(label) {\n  const regex = new RegExp(label + '[:\\\\-]\\\\s*(.*)', 'i');\n  const match = text.match(regex);\n  return match ? match[1].trim() : '';\n}\nreturn [{ json: {\n  title: extract('Role') || extract('Title'),\n  company: extract('Company'),\n  location: extract('Location') || 'Remote',\n  salary: extract('Salary') || 'Not Disclosed',\n  applyLink: extract('Apply'),\n  description: text,\n  source: 'telegram'\n}}];"
+                "functionCode": "const json = $json || {};\nconst text = json.message?.text || json.channel_post?.text || json.callback_query?.message?.text || '';\n\nfunction extractPattern(regexStr) {\n  const regex = new RegExp(regexStr, 'i');\n  const match = text.match(regex);\n  return match ? match[1].trim() : '';\n}\n\nlet company = extractPattern('Company[:\\\\-]\\\\s*(.*)');\nif (!company) {\n  const lines = text.split('\\n').map(l => l.trim()).filter(l => l);\n  if (lines.length > 0 && !lines[0].includes(':')) {\n    company = lines[0].replace(/[*_~]/g, '');\n  }\n}\n\nconst title = extractPattern('(?:Role|Title|Position)[:\\\\-]\\\\s*(.*)');\nconst location = extractPattern('Location[:\\\\-]\\\\s*(.*)') || 'Remote';\nconst salary = extractPattern('(?:Salary|Pay|Package)[:\\\\-]\\\\s*(.*)') || 'Not Disclosed';\n\nlet applyLink = extractPattern('Apply.*?\\\\s*(https?:[^\\\\s]+)');\nif (!applyLink) applyLink = extractPattern('(https?:[^\\\\s]+)');\n\nreturn [{ json: {\n  title: title,\n  company: company || 'Unknown Company',\n  location: location,\n  salary: salary,\n  applyLink: applyLink,\n  description: text,\n  source: 'telegram'\n}}];"
             }
         },
         {
@@ -130,54 +131,19 @@
             ],
             "parameters": {
                 "method": "POST",
-                "url": "http://localhost:5000/api/admin/webhook/n8n",
+                "url": "https://jobvault-kcim.onrender.com/api/admin/webhook/n8n",
                 "sendHeaders": true,
                 "headerParameters": {
                     "parameters": [
                         {
                             "name": "Authorization",
                             "value": "Bearer gojob_n8n_secret_123"
-                        },
-                        {
-                            "name": "Content-Type",
-                            "value": "application/json"
                         }
                     ]
                 },
                 "sendBody": true,
-                "specifyBody": "keypair",
-                "bodyParameters": {
-                    "parameters": [
-                        {
-                            "name": "title",
-                            "value": "={{ $json.title }}"
-                        },
-                        {
-                            "name": "company",
-                            "value": "={{ $json.company }}"
-                        },
-                        {
-                            "name": "location",
-                            "value": "={{ $json.location }}"
-                        },
-                        {
-                            "name": "salary",
-                            "value": "={{ $json.salaryNormalized }}"
-                        },
-                        {
-                            "name": "description",
-                            "value": "={{ $json.description }}"
-                        },
-                        {
-                            "name": "applyLink",
-                            "value": "={{ $json.applyLink }}"
-                        },
-                        {
-                            "name": "source",
-                            "value": "={{ $json.source }}"
-                        }
-                    ]
-                }
+                "specifyBody": "json",
+                "jsonBody": "={{ $json }}"
             }
         }
     ],

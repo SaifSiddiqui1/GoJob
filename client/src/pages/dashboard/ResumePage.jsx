@@ -4,6 +4,7 @@ import { Plus, FileText, Trash2, Edit, Download, Target, Upload, Info } from 'lu
 import { resumeAPI } from '../../services/api'
 import useAuthStore from '../../store/authStore'
 import toast from 'react-hot-toast'
+import html2pdf from 'html2pdf.js'
 
 export default function ResumePage() {
     const { user } = useAuthStore()
@@ -27,29 +28,54 @@ export default function ResumePage() {
 
             // Fetch the PDF blob
             const token = useAuthStore.getState().token
-            const printUrl = `/api/resume/${resume._id}/download`
-            const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${printUrl}`, {
+            const baseURL = import.meta.env.VITE_API_URL || '/api'
+            const response = await fetch(`${baseURL}/resume/${resume._id}/download`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({}))
-                toast.error(err.message || 'Download limit reached', { id: toastId })
+            const data = await response.json()
+            if (!response.ok || !data.success) {
+                toast.error(data.message || 'Download limit reached', { id: toastId })
                 return
             }
 
-            // Convert to BLOB and trigger true download
-            const blob = await response.blob()
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${resume.personalInfo?.fullName?.replace(/\s+/g, '_') || 'Resume'}.pdf`
-            document.body.appendChild(a)
-            a.click()
-            a.remove()
-            window.URL.revokeObjectURL(url)
+            if (data.isUrl) {
+                // Cloudinary uploaded file - it's already a PDF
+                // Force a direct download by hitting the Cloudinary URL and converting to blob
+                // Add fl_attachment to Cloudinary URL to force DL
+                const downloadUrl = data.url.includes('upload/') ? data.url.replace('upload/', 'upload/fl_attachment/') : data.url;
+                const pdfRes = await fetch(downloadUrl)
+                const blob = await pdfRes.blob()
+                const objectUrl = window.URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = objectUrl
+                a.download = data.fileName
+                document.body.appendChild(a)
+                a.click()
+                a.remove()
+                window.URL.revokeObjectURL(objectUrl)
+                toast.success('Resume downloaded!', { id: toastId })
+            } else {
+                // We have raw HTML, generate it via html2pdf natively on the client
+                const opt = {
+                    margin: 0,
+                    filename: data.fileName,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                };
 
-            toast.success('Resume downloaded!', { id: toastId })
+                // Create a temporary element to hold the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = data.html;
+                tempDiv.style.width = '800px';
+                // Hide print bar
+                const printBar = tempDiv.querySelector('.print-bar');
+                if (printBar) printBar.style.display = 'none';
+
+                await html2pdf().set(opt).from(tempDiv).save();
+                toast.success('Resume downloaded!', { id: toastId })
+            }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Download failed', { id: 'pdf-toast' })
         }
