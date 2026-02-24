@@ -26,6 +26,12 @@ export default function ProfilePage() {
     const [uploadingResume, setUploadingResume] = useState(false);
 
     const handleSaveArrayItem = (type, item, idx) => {
+        // Special case for skills: we just replace the whole array rather than append to it
+        if (type === 'keySkills') {
+            updateMutation.mutate({ keySkills: item }, { onSuccess: () => setModalConfig(null) });
+            return;
+        }
+
         const currentArray = [...(user[type] || [])];
         if (idx !== null && idx !== undefined) currentArray[idx] = item;
         else currentArray.push(item);
@@ -468,8 +474,8 @@ function ArrayModal({ config, onClose, onSave, onDelete, isPending }) {
             onSave('keySkills', skillsArray); // Replace the entire array
         };
         return (
-            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200">
-                <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 isolate">
+                <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col relative animate-in fade-in zoom-in-95 duration-200">
                     <div className="px-6 py-4 border-b flex justify-between items-center"><h3 className="font-bold">Key Skills</h3><button onClick={onClose}><X size={20} /></button></div>
                     <form onSubmit={handleSaveSkills} className="p-6">
                         <label className="label">Add skills separated by commas</label>
@@ -498,8 +504,8 @@ function ArrayModal({ config, onClose, onSave, onDelete, isPending }) {
     const formatISODate = (isoStr) => isoStr ? isoStr.substring(0, 10) : '';
 
     return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200 relative">
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 isolate">
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] relative animate-in fade-in zoom-in-95 duration-200">
                 <div className="px-6 py-4 border-b dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/20">
                     <h3 className="font-bold text-lg text-gray-900 dark:text-white capitalize">{isEditing ? 'Edit' : 'Add'} {type}</h3>
                     <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition"><X size={20} /></button>
