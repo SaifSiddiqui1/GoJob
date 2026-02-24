@@ -25,6 +25,9 @@ require('./config/passport');
 
 const app = express();
 
+// Trust Render's reverse proxy for correct IP rate-limiting
+app.set('trust proxy', 1);
+
 // Connect to MongoDB
 connectDB();
 
