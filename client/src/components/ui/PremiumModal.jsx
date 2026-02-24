@@ -8,7 +8,7 @@ export default function PremiumModal({ isOpen, onClose }) {
     const [submitting, setSubmitting] = useState(false);
     const UPI_ID = 'vault1@ptaxis';
     const UPI_NAME = 'GoJob Premium';
-    const AMOUNT = '99.00';
+    const AMOUNT = '1.00';
 
     if (!isOpen) return null;
 
@@ -50,7 +50,7 @@ export default function PremiumModal({ isOpen, onClose }) {
                 {/* Body */}
                 <div className="p-6 overflow-y-auto max-h-[70vh]">
                     <div className="flex items-end justify-center mb-6 gap-1">
-                        <span className="text-4xl font-bold text-gray-900 dark:text-white">₹99</span>
+                        <span className="text-4xl font-bold text-gray-900 dark:text-white">₹1</span>
                         <span className="text-gray-500 font-medium pb-1">/month</span>
                     </div>
 
