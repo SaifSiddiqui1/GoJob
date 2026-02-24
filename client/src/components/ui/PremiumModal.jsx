@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 export default function PremiumModal({ isOpen, onClose }) {
     const [utrNumber, setUtrNumber] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    const UPI_ID = 'saifsid1930@okicici'; // Put User's actual UPI ID here.
+    const UPI_ID = 'vault1@ptaxis';
     const UPI_NAME = 'GoJob Premium';
     const AMOUNT = '99.00';
 
