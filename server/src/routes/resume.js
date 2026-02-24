@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
 const { uploadResume } = require('../middleware/upload');
 const Resume = require('../models/Resume');
+const User = require('../models/User');
 const { uploadBuffer } = require('../config/cloudinary');
 const { generateTemplateHTML } = require('../services/resumeTemplates');
 
@@ -79,6 +79,10 @@ router.post('/upload', protect, uploadResume.single('resume'), async (req, res, 
             personalInfo: { fullName: req.user.fullName, email: req.user.email },
         });
 
+        // Sync it to the user's profile as their default resume
+        const resumeData = { url: fileUrl, originalName: req.file.originalname, uploadedAt: new Date() };
+        await User.findByIdAndUpdate(req.user._id, { profileResume: resumeData });
+
         res.json({ success: true, data: { resume, fileUrl } });
     } catch (err) { next(err); }
 });
@@ -119,7 +123,7 @@ router.get('/:id/download', protect, async (req, res, next) => {
         try {
             const puppeteer = require('puppeteer');
             const browser = await puppeteer.launch({
-                headless: 'new',
+                headless: true,
                 args: ['--no-sandbox', '--disable-setuid-sandbox']
             });
             const page = await browser.newPage();
@@ -146,9 +150,8 @@ router.get('/:id/download', protect, async (req, res, next) => {
 
         } catch (pupErr) {
             console.error('Puppeteer PDF generation failed:', pupErr);
-            // Fallback to giving them the HTML if the PDF engine crashed
-            res.set('Content-Type', 'text/html; charset=utf-8');
-            return res.send(html);
+            // Send a 500 error instead of HTML so the frontend doesn't download an HTML file disguised as a PDF
+            return res.status(500).json({ success: false, message: 'Server failed to natively generate the PDF file natively due to Chrome engine error.' });
         }
 
     } catch (err) { next(err); }

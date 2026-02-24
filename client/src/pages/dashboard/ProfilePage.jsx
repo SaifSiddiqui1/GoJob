@@ -53,7 +53,7 @@ export default function ProfilePage() {
         formData.append('resume', file);
         try {
             const res = await userAPI.uploadProfileResume(formData);
-            updateUser(res.data.user);
+            updateUser(res.data.data.user);
             toast.success('Resume uploaded!');
         } catch (err) { toast.error(err.response?.data?.message || 'Upload failed'); }
         finally { setUploadingResume(false); e.target.value = ''; }
@@ -63,7 +63,7 @@ export default function ProfilePage() {
         if (!window.confirm('Are you sure you want to delete your resume?')) return;
         try {
             const res = await userAPI.deleteProfileResume();
-            updateUser(res.data.user);
+            updateUser(res.data.data.user);
             toast.success('Resume deleted!');
         } catch (err) { toast.error('Failed to delete resume'); }
     };

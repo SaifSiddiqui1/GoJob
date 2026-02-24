@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const { uploadImage, uploadResume } = require('../middleware/upload');
 const User = require('../models/User');
+const Resume = require('../models/Resume');
 const { uploadBuffer } = require('../config/cloudinary');
 
 // Get profile
@@ -65,6 +66,16 @@ router.post('/resume', protect, uploadResume.single('resume'), async (req, res, 
         });
         const resumeData = { url: result.secure_url, originalName: req.file.originalname, uploadedAt: new Date() };
         const user = await User.findByIdAndUpdate(req.user._id, { profileResume: resumeData }, { new: true });
+
+        // Sync with Resume collection
+        await Resume.create({
+            user: req.user._id,
+            title: req.file.originalname,
+            uploadedFileUrl: result.secure_url,
+            isUploaded: true,
+            personalInfo: { fullName: req.user.fullName, email: req.user.email },
+        });
+
         res.json({ success: true, message: 'Resume uploaded successfully!', data: { profileResume: resumeData, user } });
     } catch (err) { next(err); }
 });

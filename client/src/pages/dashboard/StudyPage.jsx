@@ -64,7 +64,7 @@ export default function StudyPage() {
                             {m.description && <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-relaxed line-clamp-2">{m.description}</p>}
                             <div className="flex gap-2">
                                 {m.fileUrl && (
-                                    <a href={m.fileUrl} target="_blank" rel="noopener noreferrer" className="flex-1 btn-primary text-xs py-1.5 flex items-center justify-center gap-1">
+                                    <a href={m.fileUrl.replace('/upload/', '/upload/fl_attachment/')} target="_blank" rel="noopener noreferrer" className="flex-1 btn-primary text-xs py-1.5 flex items-center justify-center gap-1">
                                         <Download size={12} /> Download
                                     </a>
                                 )}
