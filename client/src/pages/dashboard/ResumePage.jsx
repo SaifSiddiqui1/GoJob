@@ -28,7 +28,7 @@ export default function ResumePage() {
 
             // Fetch the PDF blob
             const token = useAuthStore.getState().token
-            const baseURL = import.meta.env.VITE_API_URL || '/api'
+            const baseURL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
             const response = await fetch(`${baseURL}/resume/${resume._id}/download`, {
                 headers: { Authorization: `Bearer ${token}` }
             })

@@ -417,7 +417,7 @@ export default function ProfilePage() {
                                 <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-full mb-3">
                                     <FileText size={32} className="text-primary-600" />
                                 </div>
-                                <a href={user.profileResume.url} target="_blank" rel="noopener noreferrer" className="text-gray-900 dark:text-white font-bold hover:text-primary-600 transition break-all max-w-[250px] truncate">
+                                <a href={user.profileResume.url.replace('/upload/', `/upload/fl_attachment:${user.profileResume.originalName ? user.profileResume.originalName.replace(/[^a-zA-Z0-9.-]/g, '_') : 'Resume.pdf'}/`)} target="_blank" rel="noopener noreferrer" className="text-gray-900 dark:text-white font-bold hover:text-primary-600 transition break-all max-w-[250px] truncate">
                                     {user.profileResume.originalName || 'My_Resume.pdf'}
                                 </a>
                                 <p className="text-xs text-gray-500 mt-1">Uploaded {new Date(user.profileResume.uploadedAt).toLocaleDateString()}</p>
