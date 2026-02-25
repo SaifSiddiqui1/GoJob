@@ -63,9 +63,14 @@ export default function AIToolsPage() {
                 res = await aiAPI.summarizeJobDescription({ jobDescription });
             }
 
-            if (res.data?.success) {
-                setResultData(res.data.data);
+            const isSuccess = res?.success || res?.data?.success;
+            const payload = res?.data?.data || res?.data;
+
+            if (isSuccess && payload) {
+                setResultData(payload);
                 toast.success('AI Generation Complete!');
+            } else {
+                toast.error(res?.message || 'Warning: AI returned an empty or invalid payload.');
             }
         } catch (err) {
             toast.error(err.response?.data?.message || 'AI Generation failed. Please try again.');
