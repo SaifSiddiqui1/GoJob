@@ -35,11 +35,8 @@ export default function DashboardLayout() {
             <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
                 {/* Logo */}
                 <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/dashboard')}>
-                        <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">G</span>
-                        </div>
-                        <span className="font-heading font-bold text-xl text-gray-900 dark:text-white">JobVault</span>
+                    <div className="flex items-center cursor-pointer" onClick={() => navigate('/dashboard')}>
+                        <img src="/logo.png" alt="JobVault Logo" className="h-10 w-auto object-contain" />
                     </div>
                     <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
                         <X size={20} className="text-gray-500" />

@@ -18,13 +18,10 @@ export default function AdminLayout() {
             {/* Admin Sidebar */}
             <aside className="w-60 bg-gray-900 dark:bg-black flex flex-col flex-shrink-0">
                 <div className="p-5 border-b border-gray-800">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">A</span>
-                        </div>
+                    <div className="flex items-center gap-3">
+                        <img src="/logo.png" alt="JobVault Logo" className="h-9 w-auto object-contain opacity-90" />
                         <div>
-                            <p className="font-heading font-bold text-white text-sm">Admin Panel</p>
-                            <p className="text-gray-400 text-xs">JobVault</p>
+                            <p className="font-heading font-bold text-white text-sm whitespace-nowrap">Admin Panel</p>
                         </div>
                     </div>
                 </div>

@@ -26,11 +26,8 @@ export default function LandingPage() {
             {/* Navbar */}
             <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-lg border-b border-gray-100 dark:border-gray-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/25">
-                            <span className="text-white font-bold text-lg">G</span>
-                        </div>
-                        <span className="font-heading font-bold text-xl text-gray-900 dark:text-white">JobVault</span>
+                    <div className="flex items-center">
+                        <img src="/logo.png" alt="JobVault Logo" className="h-12 w-auto object-contain" />
                     </div>
                     <div className="flex items-center gap-3">
                         <Link to="/login" className="btn-ghost text-sm">Log In</Link>
@@ -138,11 +135,8 @@ export default function LandingPage() {
             {/* Footer */}
             <footer className="border-t border-gray-100 dark:border-gray-800 py-8 px-4">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-primary-600 flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">G</span>
-                        </div>
-                        <span className="font-heading font-bold text-gray-900 dark:text-white">JobVault</span>
+                    <div className="flex items-center">
+                        <img src="/logo.png" alt="JobVault Logo" className="h-8 w-auto object-contain opacity-80" />
                     </div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">© 2025 JobVault. Built with ❤️ for job seekers.</p>
                     <div className="flex gap-4 text-sm text-gray-500">
