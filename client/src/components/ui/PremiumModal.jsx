@@ -87,7 +87,8 @@ export default function PremiumModal({ isOpen, onClose }) {
 
         } catch (err) {
             console.error('Upgrade Error:', err);
-            toast.error(err.message || 'An error occurred during checkout.');
+            const errorMessage = err.response?.data?.message || err.message || 'An error occurred during checkout.';
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }
