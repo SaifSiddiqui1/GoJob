@@ -33,7 +33,7 @@ export default function PremiumModal({ isOpen, onClose }) {
 
             // 2. Fetch Razorpay key securely
             const keyRes = await paymentAPI.getKey();
-            const rzpKey = keyRes.data?.keyId;
+            const rzpKey = keyRes?.keyId || keyRes?.data?.keyId;
             if (!rzpKey) throw new Error('Could not fetch Payment Gateway Key');
 
             // 3. Create Order on Backend
