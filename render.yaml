@@ -1,7 +1,7 @@
 services:
-  # ─── 1. GoJob Backend API (Node.js Web Service) ───
+  # ─── 1. JobVault Backend API (Node.js Web Service) ───
   - type: web
-    name: gojob-api
+    name: jobvault-api
     env: node
     rootDir: server
     buildCommand: npm install

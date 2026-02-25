@@ -39,7 +39,7 @@ export default function DashboardLayout() {
                         <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center">
                             <span className="text-white font-bold text-lg">G</span>
                         </div>
-                        <span className="font-heading font-bold text-xl text-gray-900 dark:text-white">GoJob</span>
+                        <span className="font-heading font-bold text-xl text-gray-900 dark:text-white">JobVault</span>
                     </div>
                     <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
                         <X size={20} className="text-gray-500" />

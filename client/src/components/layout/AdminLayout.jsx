@@ -24,7 +24,7 @@ export default function AdminLayout() {
                         </div>
                         <div>
                             <p className="font-heading font-bold text-white text-sm">Admin Panel</p>
-                            <p className="text-gray-400 text-xs">GoJob</p>
+                            <p className="text-gray-400 text-xs">JobVault</p>
                         </div>
                     </div>
                 </div>

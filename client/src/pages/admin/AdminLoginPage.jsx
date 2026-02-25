@@ -63,7 +63,7 @@ export default function AdminLoginPage() {
                             <Shield size={28} className="text-red-400" />
                         </div>
                         <h1 className="text-2xl font-bold text-white font-heading">Admin Portal</h1>
-                        <p className="text-gray-500 text-sm mt-1">Restricted access — GoJob administrators only</p>
+                        <p className="text-gray-500 text-sm mt-1">Restricted access — JobVault administrators only</p>
                     </div>
 
                     {/* Error banner */}
@@ -137,7 +137,7 @@ export default function AdminLoginPage() {
                         <a href="/login" className="hover:text-gray-400 transition">← Regular user login</a>
                         <span className="flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                            GoJob Admin v1.0
+                            JobVault Admin v1.0
                         </span>
                     </div>
                 </div>

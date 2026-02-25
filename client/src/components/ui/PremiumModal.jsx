@@ -44,7 +44,7 @@ export default function PremiumModal({ isOpen, onClose }) {
                 key: rzpKey,
                 amount: orderRes.amount,
                 currency: orderRes.currency,
-                name: 'GoJob Premium',
+                name: 'JobVault Premium',
                 description: 'Unlock Unlimited ATS Checks & Resumes',
                 image: '/logo.png', // Or another icon
                 order_id: orderRes.orderId,

@@ -62,7 +62,7 @@ router.post('/upload', protect, uploadResume.single('resume'), async (req, res, 
         let fileUrl = null;
         try {
             const result = await uploadBuffer(req.file.buffer, {
-                folder: `gojob/resumes/${req.user._id}`,
+                folder: `jobvault/resumes/${req.user._id}`,
                 public_id: req.file.originalname,
                 resource_type: 'raw',
             });

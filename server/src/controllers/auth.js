@@ -44,10 +44,10 @@ exports.register = async (req, res, next) => {
         // Send OTP email (fails gracefully if RESEND_API_KEY not set)
         const emailSent = await sendEmail({
             to: email,
-            subject: 'Verify your GoJob account',
+            subject: 'Verify your JobVault account',
             html: `
         <div style="font-family:sans-serif;max-width:500px;margin:auto;padding:30px;border-radius:12px;background:#1e1b4b;color:white;">
-          <h2 style="color:#818cf8;">Welcome to GoJob! 🚀</h2>
+          <h2 style="color:#818cf8;">Welcome to JobVault! 🚀</h2>
           <p>Your email verification code is:</p>
           <div style="font-size:36px;font-weight:bold;letter-spacing:8px;text-align:center;padding:20px;background:#312e81;border-radius:8px;margin:20px 0;">${otp}</div>
           <p style="color:#a5b4fc;">This code expires in 10 minutes.</p>
@@ -111,7 +111,7 @@ exports.resendOTP = async (req, res, next) => {
 
         await sendEmail({
             to: user.email,
-            subject: 'GoJob — New verification code',
+            subject: 'JobVault — New verification code',
             html: `<div style="font-family:sans-serif;padding:20px;"><h3>Your new OTP: <strong style="font-size:28px;letter-spacing:4px;">${otp}</strong></h3><p>Expires in 10 minutes.</p></div>`,
         });
 
@@ -192,7 +192,7 @@ exports.forgotPassword = async (req, res, next) => {
 
         const emailSent = await sendEmail({
             to: email,
-            subject: 'GoJob — Password Reset OTP',
+            subject: 'JobVault — Password Reset OTP',
             html: `<div style="font-family:sans-serif;padding:20px;"><h3>Password Reset Code</h3><p>Your OTP: <strong style="font-size:28px;">${otp}</strong></p><p>Expires in 15 minutes.</p></div>`,
         });
 

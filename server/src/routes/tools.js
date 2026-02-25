@@ -21,7 +21,7 @@ router.post('/resize-photo', protect, uploadImage.single('photo'), async (req, r
         const { width = 400, height = 400, format = 'jpeg' } = req.body;
 
         const result = await uploadBuffer(req.file.buffer, {
-            folder: `gojob/tools/${req.user._id}`,
+            folder: `jobvault/tools/${req.user._id}`,
             transformation: [
                 { width: Number(width), height: Number(height), crop: 'fill' },
                 { quality: 'auto' },

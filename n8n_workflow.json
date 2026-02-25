@@ -1,5 +1,5 @@
 {
-    "name": "GoJob Ultimate Job Import Pipeline + Telegram",
+    "name": "JobVault Ultimate Job Import Pipeline + Telegram",
     "nodes": [
         {
             "id": "1",
@@ -122,7 +122,7 @@
         },
         {
             "id": "11",
-            "name": "Send to GoJob",
+            "name": "Send to JobVault",
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.1,
             "position": [
@@ -137,7 +137,7 @@
                     "parameters": [
                         {
                             "name": "Authorization",
-                            "value": "Bearer gojob_n8n_secret_123"
+                            "value": "Bearer jobvault_n8n_secret_123"
                         }
                     ]
                 },
@@ -217,7 +217,7 @@
             "main": [
                 [
                     {
-                        "node": "Send to GoJob"
+                        "node": "Send to JobVault"
                     }
                 ]
             ]

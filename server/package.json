@@ -1,7 +1,7 @@
 {
-    "name": "gojob-server",
+    "name": "jobvault-server",
     "version": "1.0.0",
-    "description": "GoJob Backend API Server",
+    "description": "JobVault Backend API Server",
     "main": "src/app.js",
     "scripts": {
         "start": "node src/app.js",

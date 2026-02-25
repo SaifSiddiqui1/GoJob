@@ -22,7 +22,7 @@ const useAdminAuthStore = create(
             isAdminRole: () => get().adminUser?.role === 'admin',
         }),
         {
-            name: 'gojob-admin-auth',
+            name: 'jobvault-admin-auth',
             partialize: (state) => ({ adminToken: state.adminToken, adminUser: state.adminUser, isAdminAuthenticated: state.isAdminAuthenticated }),
         }
     )

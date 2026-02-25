@@ -38,8 +38,8 @@ const allowedOrigins = [
     process.env.CLIENT_URL,
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://gojob-frontend.vercel.app',
-    'https://gojob.vercel.app'
+    'https://jobvault-frontend.vercel.app',
+    'https://jobvault.vercel.app'
 ].filter(Boolean);
 
 app.use(cors({
@@ -89,7 +89,7 @@ app.use(passport.initialize());
 app.get('/', (req, res) => {
     res.json({
         success: true,
-        message: 'Welcome to the GoJob API',
+        message: 'Welcome to the JobVault API',
         version: '1.0.0'
     });
 });
@@ -138,7 +138,7 @@ if (process.env.NODE_ENV !== 'test') {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`\n🚀 GoJob Server running on port ${PORT}`);
+    console.log(`\n🚀 JobVault Server running on port ${PORT}`);
     console.log(`   ENV: ${process.env.NODE_ENV}`);
     console.log(`   URL: http://localhost:${PORT}`);
 });

@@ -27,7 +27,7 @@ const useAuthStore = create(
             },
         }),
         {
-            name: 'gojob-auth',
+            name: 'jobvault-auth',
             partialize: (state) => ({ token: state.token, user: state.user, isAuthenticated: state.isAuthenticated }),
         }
     )

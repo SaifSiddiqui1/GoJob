@@ -1,11 +1,11 @@
-# GoJob — Full Development Session Log
+# JobVault — Full Development Session Log
 > All changes, fixes, and features built across this conversation.
 
 ---
 
 ## 🏗️ Project Overview
 
-**GoJob** is an AI-powered SaaS platform featuring:
+**JobVault** is an AI-powered SaaS platform featuring:
 - ATS-friendly resume builder with 12 professional templates
 - Job aggregation from external APIs (Adzuna, Remotive, RemoteOK, Arbeitnow)
 - AI integrations (Gemini 1.5 Flash)
@@ -20,7 +20,7 @@
 
 ### MongoDB Connection
 - Fixed DNS resolution errors by forcing Node.js to use Google DNS (`8.8.8.8`)
-- Corrected MongoDB URI format: `mongodb+srv://.../gojob?appName=Cluster0`
+- Corrected MongoDB URI format: `mongodb+srv://.../jobvault?appName=Cluster0`
 - Added retry logic for connection failures
 - Fixed syntax error in `fetchJobs.js`
 
@@ -181,7 +181,7 @@
 
 ```env
 # server/.env
-MONGODB_URI=mongodb+srv://user:pass@cluster.af82v4t.mongodb.net/gojob?appName=Cluster0
+MONGODB_URI=mongodb+srv://user:pass@cluster.af82v4t.mongodb.net/jobvault?appName=Cluster0
 JWT_SECRET=your_jwt_secret
 GEMINI_API_KEY=your_gemini_key
 
@@ -218,11 +218,11 @@ CLOUDINARY_API_SECRET=xxx
 
 ```bash
 # Terminal 1 — Backend
-cd E:\Vibe\GoJob\server
+cd E:\Vibe\JobVault\server
 node src/app.js
 
 # Terminal 2 — Frontend
-cd E:\Vibe\GoJob\client
+cd E:\Vibe\JobVault\client
 npm run dev
 ```
 
@@ -236,10 +236,10 @@ npm run dev
 ## 👤 Make Account Admin (one-time)
 
 ```powershell
-cd E:\Vibe\GoJob\server
+cd E:\Vibe\JobVault\server
 node -e "require('dotenv').config(); const dns=require('dns'); dns.setServers(['8.8.8.8']); const mongoose=require('mongoose'); mongoose.connect(process.env.MONGODB_URI).then(async()=>{ const U=require('./src/models/User'); const u=await U.findOneAndUpdate({email:'YOUR_EMAIL'},{role:'admin'},{new:true}); console.log(u?'Admin set: '+u.email:'Not found'); process.exit(); })"
 ```
 
 ---
 
-*Generated: 2026-02-22 | GoJob Dev Session*
+*Generated: 2026-02-22 | JobVault Dev Session*

@@ -30,7 +30,7 @@ export default function LandingPage() {
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/25">
                             <span className="text-white font-bold text-lg">G</span>
                         </div>
-                        <span className="font-heading font-bold text-xl text-gray-900 dark:text-white">GoJob</span>
+                        <span className="font-heading font-bold text-xl text-gray-900 dark:text-white">JobVault</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <Link to="/login" className="btn-ghost text-sm">Log In</Link>
@@ -82,7 +82,7 @@ export default function LandingPage() {
                         Everything You Need to <span className="text-primary-600">Get Hired</span>
                     </h2>
                     <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
-                        From resume building to job discovery — GoJob covers your entire job search journey with AI.
+                        From resume building to job discovery — JobVault covers your entire job search journey with AI.
                     </p>
                 </div>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -102,7 +102,7 @@ export default function LandingPage() {
             <section className="py-20 px-4 bg-gray-50 dark:bg-gray-900">
                 <div className="max-w-4xl mx-auto">
                     <div className="text-center mb-14">
-                        <h2 className="font-heading text-3xl font-bold text-gray-900 dark:text-white mb-4">How GoJob Works</h2>
+                        <h2 className="font-heading text-3xl font-bold text-gray-900 dark:text-white mb-4">How JobVault Works</h2>
                     </div>
                     <div className="grid md:grid-cols-3 gap-8">
                         {[
@@ -128,7 +128,7 @@ export default function LandingPage() {
                     <h2 className="font-heading text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
                         Ready to Land Your Dream Job?
                     </h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-8">Join thousands of job seekers who already use GoJob.</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-8">Join thousands of job seekers who already use JobVault.</p>
                     <Link to="/signup" className="btn-primary text-base px-10 py-4 inline-flex items-center gap-2">
                         Start For Free <ArrowRight size={18} />
                     </Link>
@@ -142,9 +142,9 @@ export default function LandingPage() {
                         <div className="w-7 h-7 rounded-lg bg-primary-600 flex items-center justify-center">
                             <span className="text-white font-bold text-sm">G</span>
                         </div>
-                        <span className="font-heading font-bold text-gray-900 dark:text-white">GoJob</span>
+                        <span className="font-heading font-bold text-gray-900 dark:text-white">JobVault</span>
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">© 2025 GoJob. Built with ❤️ for job seekers.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">© 2025 JobVault. Built with ❤️ for job seekers.</p>
                     <div className="flex gap-4 text-sm text-gray-500">
                         <a href="#" className="hover:text-primary-600">Privacy</a>
                         <a href="#" className="hover:text-primary-600">Terms</a>

@@ -48,7 +48,7 @@ router.post('/photo', protect, uploadImage.single('photo'), async (req, res, nex
     try {
         if (!req.file) return res.status(400).json({ success: false, message: 'No image provided.' });
         const result = await uploadBuffer(req.file.buffer, {
-            folder: `gojob/photos/${req.user._id}`,
+            folder: `jobvault/photos/${req.user._id}`,
             transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }],
         });
         const user = await User.findByIdAndUpdate(req.user._id, { photo: result.secure_url }, { new: true });
@@ -61,7 +61,7 @@ router.post('/resume', protect, uploadResume.single('resume'), async (req, res, 
     try {
         if (!req.file) return res.status(400).json({ success: false, message: 'No file provided.' });
         const result = await uploadBuffer(req.file.buffer, {
-            folder: `gojob/resumes_profile/${req.user._id}`,
+            folder: `jobvault/resumes_profile/${req.user._id}`,
             public_id: req.file.originalname,
             resource_type: 'raw',
         });

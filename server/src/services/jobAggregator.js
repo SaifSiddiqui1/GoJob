@@ -107,7 +107,7 @@ const fetchFromRemotive = async () => {
 const fetchFromRemoteOK = async () => {
     try {
         const res = await axios.get('https://remoteok.com/api', {
-            headers: { 'User-Agent': 'GoJob/1.0 job-aggregator' },
+            headers: { 'User-Agent': 'JobVault/1.0 job-aggregator' },
             timeout: 10000,
         });
         const jobs = (res.data || []).filter(j => j.id && j.position);

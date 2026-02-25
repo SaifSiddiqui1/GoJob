@@ -33,7 +33,7 @@ export default function SettingsPage() {
         <div className="max-w-xl mx-auto space-y-5 animate-fade-in">
             <div>
                 <h1 className="font-heading text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-                <p className="text-gray-500 text-sm mt-1">Customize your GoJob experience</p>
+                <p className="text-gray-500 text-sm mt-1">Customize your JobVault experience</p>
             </div>
 
             {/* Appearance */}
@@ -84,9 +84,9 @@ export default function SettingsPage() {
 
             {/* About */}
             <div className="card">
-                <h2 className="font-heading font-semibold text-gray-900 dark:text-white mb-2">About GoJob</h2>
+                <h2 className="font-heading font-semibold text-gray-900 dark:text-white mb-2">About JobVault</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                    GoJob is an AI-powered ATS resume builder and job finder platform. Built to level the playing field for every job seeker in India. 100% free to start.
+                    JobVault is an AI-powered ATS resume builder and job finder platform. Built to level the playing field for every job seeker in India. 100% free to start.
                 </p>
                 <div className="mt-3 flex gap-4 text-sm">
                     <button onClick={() => toast('Privacy Policy — coming soon')} className="text-primary-600 hover:underline">Privacy Policy</button>

@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const sendEmail = async ({ to, subject, html, text }) => {
     try {
         const { data, error } = await resend.emails.send({
-            from: process.env.FROM_EMAIL || 'GoJob <noreply@gojob.app>',
+            from: process.env.FROM_EMAIL || 'JobVault <noreply@jobvault.app>',
             to,
             subject,
             html,

@@ -165,9 +165,9 @@ export default function AdminJobs() {
 
                             <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
                                 <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">2. Authentication Header</h3>
-                                <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-950 p-2.5 rounded-lg border border-gray-200 dark:border-gray-800 cursor-copy" onClick={() => { navigator.clipboard.writeText('Authorization: Bearer gojob_n8n_secret_123'); toast.success('Header copied') }}>
+                                <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-950 p-2.5 rounded-lg border border-gray-200 dark:border-gray-800 cursor-copy" onClick={() => { navigator.clipboard.writeText('Authorization: Bearer jobvault_n8n_secret_123'); toast.success('Header copied') }}>
                                     <code className="text-sm font-mono text-gray-800 dark:text-gray-300">
-                                        <span className="text-gray-500">Authorization:</span> Bearer gojob_n8n_secret_123
+                                        <span className="text-gray-500">Authorization:</span> Bearer jobvault_n8n_secret_123
                                     </code>
                                     <Copy size={14} className="text-gray-400" />
                                 </div>

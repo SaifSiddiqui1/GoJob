@@ -1,5 +1,5 @@
 {
-    "name": "GoJob - Fetch Jobs & Send to Webhook",
+    "name": "JobVault - Fetch Jobs & Send to Webhook",
     "nodes": [
         {
             "parameters": {
@@ -100,7 +100,7 @@
                 "options": {}
             },
             "id": "4",
-            "name": "Format for GoJob",
+            "name": "Format for JobVault",
             "type": "n8n-nodes-base.set",
             "typeVersion": 3.2,
             "position": [
@@ -117,7 +117,7 @@
                     "parameters": [
                         {
                             "name": "Authorization",
-                            "value": "Bearer gojob_n8n_secret_123"
+                            "value": "Bearer jobvault_n8n_secret_123"
                         }
                     ]
                 },
@@ -127,7 +127,7 @@
                 "options": {}
             },
             "id": "5",
-            "name": "Send to GoJob Admin",
+            "name": "Send to JobVault Admin",
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.1,
             "position": [
@@ -163,18 +163,18 @@
             "main": [
                 [
                     {
-                        "node": "Format for GoJob",
+                        "node": "Format for JobVault",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "Format for GoJob": {
+        "Format for JobVault": {
             "main": [
                 [
                     {
-                        "node": "Send to GoJob Admin",
+                        "node": "Send to JobVault Admin",
                         "type": "main",
                         "index": 0
                     }

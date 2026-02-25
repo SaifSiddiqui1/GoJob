@@ -14,7 +14,7 @@ const { aggregateJobs } = require('../services/jobAggregator');
 router.post('/webhook/n8n', async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
-        const secret = process.env.N8N_WEBHOOK_SECRET || 'gojob_n8n_secret_123';
+        const secret = process.env.N8N_WEBHOOK_SECRET || 'jobvault_n8n_secret_123';
         if (!authHeader || authHeader !== `Bearer ${secret}`) {
             return res.status(401).json({ success: false, message: 'Unauthorized webhook request' });
         }
@@ -203,7 +203,7 @@ router.post('/study', uploadFile.single('file'), async (req, res, next) => {
         let fileUrl;
         if (req.file) {
             const result = await uploadBuffer(req.file.buffer, {
-                folder: 'gojob/study',
+                folder: 'jobvault/study',
                 resource_type: 'raw',
             });
             fileUrl = result.secure_url;
