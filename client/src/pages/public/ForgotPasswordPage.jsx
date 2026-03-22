@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Eye, EyeOff } from 'lucide-react'
 import { authAPI } from '../../services/api'
 import toast from 'react-hot-toast'
 
@@ -9,6 +10,7 @@ export default function ForgotPasswordPage() {
     const [userId, setUserId] = useState(null)
     const [form, setForm] = useState({ email: '', otp: '', newPassword: '' })
     const [loading, setLoading] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
 
     const handleForgot = async (e) => {
         e.preventDefault()
@@ -60,8 +62,17 @@ export default function ForgotPasswordPage() {
                     <form onSubmit={handleReset} className="space-y-4">
                         <input value={form.otp} onChange={e => setForm(p => ({ ...p, otp: e.target.value }))} maxLength={6}
                             placeholder="Enter OTP" className="input bg-white/10 border-white/20 text-white placeholder-white/40 text-center text-xl tracking-widest" />
-                        <input value={form.newPassword} onChange={e => setForm(p => ({ ...p, newPassword: e.target.value }))} type="password"
-                            placeholder="New password" className="input bg-white/10 border-white/20 text-white placeholder-white/40" />
+                        <div className="relative">
+                            <input value={form.newPassword} onChange={e => setForm(p => ({ ...p, newPassword: e.target.value }))} type={showPassword ? "text" : "password"}
+                                placeholder="New password" className="input bg-white/10 border-white/20 text-white placeholder-white/40 pr-10" />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
                         <button type="submit" disabled={loading} className="btn-primary w-full py-3">{loading ? 'Resetting...' : 'Reset Password'}</button>
                     </form>
                 )}

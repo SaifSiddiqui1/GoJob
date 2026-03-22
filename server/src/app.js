@@ -4,13 +4,27 @@ const cors = require('cors');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
+const hpp = require('hpp');
 const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const passport = require('passport');
+const crypto = require('crypto');
 
+const logger = require('./utils/logger');
 const connectDB = require('./config/db');
 const { startJobFetchCron } = require('./jobs/fetchJobs');
+
+// Handle uncaught exceptions and unhandled rejections
+process.on('uncaughtException', (err) => {
+    logger.error('UNCAUGHT EXCEPTION! Shutting down...', err);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (err) => {
+    logger.error('UNHANDLED REJECTION! Shutting down...', err);
+    process.exit(1);
+});
 
 // Route imports
 const authRoutes = require('./routes/auth');
@@ -59,6 +73,16 @@ app.use(mongoSanitize());
 
 // Prevent XSS attacks
 app.use(xss());
+
+// Prevent HTTP Parameter Pollution
+app.use(hpp());
+
+// Add Correlation ID for tracking requests
+app.use((req, res, next) => {
+    req.correlationId = req.headers['x-correlation-id'] || crypto.randomUUID();
+    res.setHeader('X-Correlation-Id', req.correlationId);
+    next();
+});
 
 const allowedOrigins = [
     process.env.CLIENT_URL,
@@ -170,15 +194,20 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-    if (process.env.NODE_ENV !== 'production') {
-        console.error('Error:', err.stack);
-    } else {
-        console.error('Error:', err.message);
-    }
     const statusCode = err.statusCode || 500;
     const isProduction = process.env.NODE_ENV === 'production';
+    
+    logger.error(`[${req.correlationId || 'NO-ID'}] ${req.method} ${req.originalUrl} - ${err.message}`, { 
+        stack: err.stack,
+        correlationId: req.correlationId,
+        method: req.method,
+        url: req.originalUrl,
+        ip: req.ip
+    });
+
     res.status(statusCode).json({
         success: false,
+        correlationId: req.correlationId,
         // Never leak internal error messages to clients in production
         message: isProduction && statusCode === 500
             ? 'An internal server error occurred. Please try again.'

@@ -240,6 +240,14 @@ exports.resetPassword = async (req, res, next) => {
         
         if (user.otpExpires < new Date()) return res.status(400).json({ success: false, message: 'OTP expired.' });
 
+        if (!newPassword || newPassword.length < 8) {
+            return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long.' });
+        }
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+        if (!passwordRegex.test(newPassword)) {
+            return res.status(400).json({ success: false, message: 'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character.' });
+        }
+
         user.password = newPassword;
         user.otp = undefined;
         user.otpExpires = undefined;

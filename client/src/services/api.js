@@ -27,6 +27,16 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (res) => res.data,
     (err) => {
+        // Detailed error logging for debugging
+        const errorDetails = {
+            message: err.message,
+            status: err.response?.status,
+            data: err.response?.data,
+            url: err.config?.url,
+            method: err.config?.method,
+        };
+        console.error('[API Error]:', errorDetails);
+
         if (err.response?.status === 401) {
             // Do not trigger global logout for authentication routes (where 401 is expected for bad credentials)
             if (!err.config?.url?.startsWith('/auth/')) {
@@ -149,7 +159,17 @@ employerApi.interceptors.request.use((config) => {
 });
 employerApi.interceptors.response.use(
     (res) => res.data,
-    (err) => Promise.reject(err)
+    (err) => {
+        const errorDetails = {
+            message: err.message,
+            status: err.response?.status,
+            data: err.response?.data,
+            url: err.config?.url,
+            method: err.config?.method,
+        };
+        console.error('[Employer API Error]:', errorDetails);
+        return Promise.reject(err);
+    }
 );
 
 export const employerAPI = {
