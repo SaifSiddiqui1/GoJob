@@ -15,3 +15,14 @@ npm-debug.log*
 .DS_Store
 .vercel
 .render
+
+# AI & Agent Files
+.adal
+.agents
+.kiro
+my-skills
+
+# Chat Logs & Secrets
+*.md
+*.md.resolved
+.git_error.txt

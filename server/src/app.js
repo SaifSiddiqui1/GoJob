@@ -47,8 +47,9 @@ app.disable('x-powered-by');
 // Trust Render's reverse proxy for correct IP rate-limiting
 app.set('trust proxy', 1);
 
-// Connect to MongoDB
-connectDB();
+
+// Connect to MongoDB — server starts only AFTER successful connection
+// so no Mongoose queries can run before the connection is ready.
 
 // Security Middleware
 app.use(helmet({
@@ -216,16 +217,22 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Start cron jobs
-if (process.env.NODE_ENV !== 'test') {
-    startJobFetchCron();
-}
+// ─── Startup ─────────────────────────────────────────────────────────────────
+// Await DB connection before accepting HTTP traffic — prevents the
+// "Operation buffering timed out" error on first requests.
+(async () => {
+    await connectDB();
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`\n🚀 JobVault Server running on port ${PORT}`);
-    console.log(`   ENV: ${process.env.NODE_ENV}`);
-    console.log(`   URL: http://localhost:${PORT}`);
-});
+    if (process.env.NODE_ENV !== 'test') {
+        startJobFetchCron();
+    }
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+        console.log(`\n🚀 GoJob Server running on port ${PORT}`);
+        console.log(`   ENV: ${process.env.NODE_ENV}`);
+        console.log(`   URL: http://localhost:${PORT}`);
+    });
+})();
 
 module.exports = app;

@@ -181,6 +181,22 @@
   }
 }
 
+/* Dropdown entry animation */
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* Mobile drawer slide-in from left */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.22s cubic-bezier(0.34, 1.1, 0.64, 1);
+}
+
+
 /* ATS score ring */
 .score-ring {
   transition: stroke-dashoffset 1s ease-in-out;
@@ -196,4 +212,21 @@
   background-image:
     radial-gradient(at 20% 30%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
     radial-gradient(at 80% 70%, rgba(249, 115, 22, 0.08) 0%, transparent 50%);
+}
+
+/* ── Rich Text Editor ─────────────────────────────────────────────────────── */
+/* Placeholder via data-placeholder attr when empty */
+.rte-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  pointer-events: none;
+  font-style: italic;
+}
+/* Selection highlight inside editor */
+.rte-editor ::selection {
+  background: rgba(139, 92, 246, 0.25);
+}
+/* Focus ring override */
+.rte-editor:focus {
+  outline: none;
 }
