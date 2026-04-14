@@ -1,9 +1,10 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Briefcase, Users, BookOpen, ArrowLeft, LogOut, Building2 } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Users, BookOpen, ArrowLeft, LogOut, Building2, BarChart2 } from 'lucide-react'
 import useAdminAuthStore from '../../store/adminAuthStore'
 
 const adminNav = [
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+    { to: '/admin/analytics', label: 'Analytics', icon: BarChart2 },
     { to: '/admin/jobs', label: 'Job Approval', icon: Briefcase },
     { to: '/admin/users', label: 'Users', icon: Users },
     { to: '/admin/employers', label: 'Employers', icon: Building2 },

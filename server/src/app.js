@@ -35,6 +35,7 @@ const aiRoutes = require('./routes/ai');
 const adminRoutes = require('./routes/admin');
 const studyRoutes = require('./routes/study');
 const toolRoutes = require('./routes/tools');
+const analyticsRoutes = require('./routes/analytics');
 
 // Passport config
 require('./config/passport');
@@ -187,6 +188,7 @@ app.use('/api/study', studyRoutes);
 app.use('/api/tools', toolRoutes);
 app.use('/api/payment', require('./routes/payment'));
 app.use('/api/employer', require('./routes/employer'));
+app.use('/api/analytics', analyticsRoutes);
 
 // 404 handler
 app.use((req, res) => {

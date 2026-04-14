@@ -1,0 +1,353 @@
+{
+  "name": "GoJob 2: Job Processing Worker",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "1",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [ 180, 240 ]
+    },
+    {
+      "parameters": {
+        "operation": "lpop",
+        "key": "job_queue"
+      },
+      "id": "2",
+      "name": "Redis LPOP",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [ 380, 240 ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.value}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Ensure Queue Has Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [ 580, 240 ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = JSON.parse($json.value);\n// Regex to find a URL in text\nconst urlRegex = /(https?:\\/\\/[^\\s]+)/g;\nconst links = message.text ? message.text.match(urlRegex) : [];\nconst apply_link = links && links.length > 0 ? links[0] : null;\nreturn [{\n  json: {\n    ...message,\n    apply_link,\n    description: message.text\n  }\n}];"
+      },
+      "id": "4",
+      "name": "Extract Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [ 780, 220 ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.apply_link}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "5",
+      "name": "Ensure Has Link",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [ 980, 220 ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.apply_link}}",
+        "allowUnauthorizedCerts": true,
+        "responseFormat": "string"
+      },
+      "id": "6",
+      "name": "Fetch Page content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [ 1180, 200 ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    role: 'Software Engineer', // Replace with actual Gemini parsing logic \n    company: 'Meta', // Example payload matching your spec\n    salary: '₹12 LPA',\n    category: 'Frontend',\n    location: 'Remote',\n    description: $json.description,\n    apply_link: $json.apply_link\n  }\n}];"
+      },
+      "id": "7",
+      "name": "AI Parse & Classify (Gemini Placeholders)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [ 1380, 200 ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const salary = $json.salary || '';\n\nfunction normalizeSalary(s) {\n  let lower = s.toLowerCase();\n  if (lower.includes('lpa')) return parseFloat(lower) * 100000;\n  if (lower.includes('$')) return parseFloat(lower.replace('$', '')) * 83 * 12;\n  if (lower.includes('month')) return parseFloat(lower) * 12;\n  return null;\n}\n\nreturn [{\n  json: { ...$json, salary_normalized: normalizeSalary(salary) }\n}];"
+      },
+      "id": "8",
+      "name": "Normalize Salary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [ 1580, 200 ]
+    },
+    {
+      "parameters": {
+        "collection": "jobs",
+        "operation": "find",
+        "query": "={\n  \"apply_link\": \"{{$json.apply_link}}\"\n}"
+      },
+      "id": "9",
+      "name": "MongoDB Look for Duplicate",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [ 1780, 200 ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.length}}",
+              "operation": "equal",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "10",
+      "name": "If Is Unique",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [ 1980, 200 ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const trustedCompanies = ['Google', 'Microsoft', 'Amazon', 'Meta', 'Infosys', 'TCS'];\nconst autoApprove = trustedCompanies.includes($json.company);\nreturn [{\n  json: {\n    ...$json,\n    status: autoApprove ? 'approved' : 'pending',\n    createdAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "11",
+      "name": "Auto Approval Logic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [ 2180, 180 ]
+    },
+    {
+      "parameters": {
+        "collection": "jobs",
+        "operation": "insert",
+        "fields": "role, company, salary, salary_normalized, category, location, description, apply_link, status, createdAt"
+      },
+      "id": "12",
+      "name": "Insert to MongoDB",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [ 2400, 180 ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "range": "Sheet1!A:H",
+        "options": {},
+        "dataMode": "define",
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldId": "Role", "fieldValue": "={{$json.role}}" },
+            { "fieldId": "Company", "fieldValue": "={{$json.company}}" },
+            { "fieldId": "Salary", "fieldValue": "={{$json.salary}}" },
+            { "fieldId": "Location", "fieldValue": "={{$json.location}}" },
+            { "fieldId": "Description", "fieldValue": "={{$json.description}}" },
+            { "fieldId": "Skills", "fieldValue": "={{$json.category}}" },
+            { "fieldId": "Apply Link", "fieldValue": "={{$json.apply_link}}" }
+          ]
+        }
+      },
+      "id": "13",
+      "name": "Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [ 2600, 180 ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=✅ Job Processed\\n\\n💼 Role: {{$json.role}}\\n🏢 Company: {{$json.company}}\\n📍 Location: {{$json.location}}\\n💰 Salary: {{$json.salary}} ({{$json.salary_normalized}} yearly)\\n\\n🏷 Category: {{$json.category}}\\n📊 Status: {{$json.status}}\\n\\n🔗 Apply: {{$json.apply_link}}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "14",
+      "name": "Telegram Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [ 2800, 180 ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Redis LPOP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis LPOP": {
+      "main": [
+        [
+          {
+            "node": "Ensure Queue Has Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure Queue Has Data": {
+      "main": [
+        [
+          {
+            "node": "Extract Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Link": {
+      "main": [
+        [
+          {
+            "node": "Ensure Has Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure Has Link": {
+      "main": [
+        [
+          {
+            "node": "Fetch Page content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Page content": {
+      "main": [
+        [
+          {
+            "node": "AI Parse & Classify (Gemini Placeholders)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Parse & Classify (Gemini Placeholders)": {
+      "main": [
+        [
+          {
+            "node": "Normalize Salary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Salary": {
+      "main": [
+        [
+          {
+            "node": "MongoDB Look for Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MongoDB Look for Duplicate": {
+      "main": [
+        [
+          {
+            "node": "If Is Unique",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Is Unique": {
+      "main": [
+        [
+          {
+            "node": "Auto Approval Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto Approval Logic": {
+      "main": [
+        [
+          {
+            "node": "Insert to MongoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert to MongoDB": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Telegram Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "v1.0.0"
+}

@@ -1,0 +1,150 @@
+{
+    "name": "GoJob AI Job Importer",
+    "active": false,
+    "nodes": [
+        {
+            "parameters": {
+                "path": "job-import",
+                "httpMethod": "POST",
+                "responseMode": "lastNode"
+            },
+            "id": "Webhook",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                300,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "={{$json.url}}",
+                "responseFormat": "string"
+            },
+            "id": "FetchPage",
+            "name": "Fetch Job Page",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 2,
+            "position": [
+                520,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "functionCode": "const html=$json.body||"";\nconst text=html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();\nreturn [{json:{content:text}}];"
+            },
+            "id": "CleanHTML",
+            "name": "Clean HTML",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                720,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+                "method": "POST",
+                "jsonParameters": true,
+                "responseFormat": "json",
+                "bodyParametersJson": "={"contents":[{"parts":[{"text":"Extract job information from the following text and return JSON with title, company, location, salary, experience, skills, description. TEXT: "+$json.content}]}]}"
+            },
+            "id": "GeminiAI",
+            "name": "Gemini Parser",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 2,
+            "position": [
+                920,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "functionCode": "const ai=$json.candidates?.[0]?.content?.parts?.[0]?.text||"{}";\nlet data={};\ntry{data=JSON.parse(ai);}catch(e){data={raw:ai}}\nreturn [{json:data}];"
+            },
+            "id": "ParseJSON",
+            "name": "Parse AI JSON",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                1120,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "responseData": "={{$json}}"
+            },
+            "id": "Respond",
+            "name": "Respond",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                1320,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Job Page",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Job Page": {
+            "main": [
+                [
+                    {
+                        "node": "Clean HTML",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Clean HTML": {
+            "main": [
+                [
+                    {
+                        "node": "Gemini Parser",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini Parser": {
+            "main": [
+                [
+                    {
+                        "node": "Parse AI JSON",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse AI JSON": {
+            "main": [
+                [
+                    {
+                        "node": "Respond",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {},
+    "versionId": "1"
+}

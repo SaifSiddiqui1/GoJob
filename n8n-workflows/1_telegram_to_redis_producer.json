@@ -1,0 +1,54 @@
+{
+  "name": "GoJob 1: Telegram to Redis Producer",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "channel_post"
+        ],
+        "download": false
+      },
+      "id": "1",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        180,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "rpush",
+        "key": "job_queue",
+        "value": "={{JSON.stringify($json.message)}}"
+      },
+      "id": "2",
+      "name": "Push to Redis Queue",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        400,
+        240
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Push to Redis Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "v1.0.0"
+}

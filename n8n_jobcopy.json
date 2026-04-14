@@ -1,0 +1,206 @@
+{
+    "name": "GoJob - Job Import Webhook",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "job-import",
+                "httpMethod": "POST",
+                "responseMode": "lastNode"
+            },
+            "id": "webhook",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "=https://r.jina.ai/{{$json["url"]}}",
+                "responseFormat": "string"
+            },
+            "id": "fetch",
+            "name": "Fetch Page",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                400,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "functionCode": "const text = ($json.body || '').replace(/\s+/g,' ').slice(0,8000); return [{ json: { content: text, url: $node["Webhook"].json.url } }];"
+            },
+            "id": "clean",
+            "name": "Clean Content",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                600,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_API_KEY",
+                "method": "POST",
+                "jsonParameters": true,
+                "bodyParametersJson": "={"contents":[{"parts":[{"text":"Extract job details JSON with title, company, location, experience, salary, skills, description. TEXT: " + $json["content"]}]}]}"
+            },
+            "id": "ai",
+            "name": "Gemini AI",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                800,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "functionCode": "const raw = $json.candidates?.[0]?.content?.parts?.[0]?.text || '{}'; let data = {}; try { data = JSON.parse(raw); } catch(e) { data = { raw }; } return [{ json: data }];"
+            },
+            "id": "parse",
+            "name": "Parse JSON",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                1000,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "append",
+                "sheetId": "YOUR_SHEET_ID",
+                "range": "Sheet1!A:H"
+            },
+            "id": "gsheet",
+            "name": "Google Sheets",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4,
+            "position": [
+                1200,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://yourdomain.com/api/jobs",
+                "method": "POST",
+                "jsonParameters": true,
+                "bodyParametersJson": "={{$json}}"
+            },
+            "id": "api",
+            "name": "Send to Admin API",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1200,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "responseData": "={{$json}}"
+            },
+            "id": "response",
+            "name": "Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                1400,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Page",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Page": {
+            "main": [
+                [
+                    {
+                        "node": "Clean Content",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Clean Content": {
+            "main": [
+                [
+                    {
+                        "node": "Gemini AI",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini AI": {
+            "main": [
+                [
+                    {
+                        "node": "Parse JSON",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse JSON": {
+            "main": [
+                [
+                    {
+                        "node": "Google Sheets",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Send to Admin API",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Sheets": {
+            "main": [
+                [
+                    {
+                        "node": "Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send to Admin API": {
+            "main": [
+                [
+                    {
+                        "node": "Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

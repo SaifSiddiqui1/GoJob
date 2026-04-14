@@ -25,6 +25,17 @@ router.post('/create-order', protect, async (req, res, next) => {
     try {
         const amount = 1 * 100; // ₹1 in paise
 
+        // Fallback for local development if no Razorpay keys are set
+        if (!process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID.includes('placeholder')) {
+            return res.json({
+                success: true,
+                orderId: 'mock_order_' + Date.now(),
+                amount: amount,
+                currency: 'INR',
+                isMock: true
+            });
+        }
+
         const options = {
             amount: amount,
             currency: 'INR',
@@ -49,7 +60,19 @@ router.post('/create-order', protect, async (req, res, next) => {
 // Verify payment signature
 router.post('/verify', protect, async (req, res, next) => {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, isMock } = req.body;
+
+        // Accept mock verification if Razorpay isn't configured in environment
+        const isRazorpayUnconfigured = !process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID.includes('placeholder');
+        if (isMock && isRazorpayUnconfigured) {
+            const premiumExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            const updatedUser = await User.findByIdAndUpdate(
+                req.user._id,
+                { isPremium: true, premiumExpiresAt },
+                { new: true }
+            );
+            return res.json({ success: true, message: 'Mock Payment verified successfully! Welcome to Premium.', user: updatedUser });
+        }
 
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
             return res.status(400).json({ success: false, message: 'Invalid payment payload.' });

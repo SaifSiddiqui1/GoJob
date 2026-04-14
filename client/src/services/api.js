@@ -195,6 +195,21 @@ export const employerAPI = {
     deleteJob: (id) => employerApi.delete(`/employer/jobs/${id}`),
 }
 
+// ─── Analytics ────────────────────────────────────────────────
+export const analyticsAPI = {
+    getOverview: () => api.get('/analytics/overview'),
+    getUserGrowth: (days = 30) => api.get(`/analytics/users/growth?days=${days}`),
+    getUserDemographics: () => api.get('/analytics/users/demographics'),
+    getJobsOverview: () => api.get('/analytics/jobs/overview'),
+    getJobGrowth: (days = 30) => api.get(`/analytics/jobs/growth?days=${days}`),
+    getResumesOverview: () => api.get('/analytics/resumes/overview'),
+    getRevenue: () => api.get('/analytics/revenue'),
+    getPlatformHealth: () => api.get('/analytics/platform/health'),
+    getTrendingSkills: () => api.get('/analytics/skills/trending'),
+    getFunnel: () => api.get('/analytics/funnel'),
+    getRecentActivity: () => api.get('/analytics/activity/recent'),
+}
+
 // ─── Admin Employer Mgmt (uses admin api instance) ────────────
 export const adminEmployerAPI = {
     getEmployers: (params) => api.get('/admin/employers', { params }),

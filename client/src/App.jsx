@@ -38,6 +38,7 @@ import AdminStudy from './pages/admin/AdminStudy'
 import AdminLoginPage from './pages/admin/AdminLoginPage'
 import AdminJobDetailPage from './pages/admin/AdminJobDetailPage'
 import AdminEmployers from './pages/admin/AdminEmployers'
+import AdminAnalytics from './pages/admin/AdminAnalytics'
 
 // Employer pages
 import EmployerSignupPage from './pages/employer/EmployerSignupPage'
@@ -117,6 +118,7 @@ export default function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="study" element={<AdminStudy />} />
           <Route path="employers" element={<AdminEmployers />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
         </Route>
 
         {/* Employer auth redirects — login/signup now unified */}

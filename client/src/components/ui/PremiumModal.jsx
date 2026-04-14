@@ -40,6 +40,26 @@ export default function PremiumModal({ isOpen, onClose }) {
             const orderRes = await paymentAPI.createOrder();
             if (!orderRes.success) throw new Error(orderRes.message || 'Failed to initialize payment.');
 
+            if (orderRes.isMock) {
+                // Mock testing flow (no Razorpay credentials detected)
+                const verifyRes = await paymentAPI.verifyPayment({
+                    razorpay_payment_id: 'mock_pay_' + Date.now(),
+                    razorpay_order_id: orderRes.orderId,
+                    razorpay_signature: 'mock_signature_test',
+                    isMock: true
+                });
+                
+                if (verifyRes.success) {
+                    toast.success('🎉 Welcome to Premium! (Test Mode)');
+                    updateUser(verifyRes.user);
+                    onClose();
+                } else {
+                    toast.error(verifyRes.message || 'Mock Verification failed!');
+                }
+                setLoading(false);
+                return;
+            }
+
             const options = {
                 key: rzpKey,
                 amount: orderRes.amount,

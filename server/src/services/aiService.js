@@ -1,7 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
 
 
@@ -192,8 +192,15 @@ Location: ${userData.location}
 Write in third person. Be professional and engaging.
 Return ONLY the bio text.`;
 
-    const result = await model.generateContent(prompt);
-    return result.response.text().trim();
+    try {
+        const result = await model.generateContent(prompt);
+        return result.response.text().trim();
+    } catch (error) {
+        if (error.status === 429 || (error.message && error.message.includes('429'))) {
+            throw new Error('AI rate limit exceeded. Please wait 15-30 seconds and try again.');
+        }
+        throw new Error('AI Service Error: Failed to generate bio.');
+    }
 };
 
 /**
