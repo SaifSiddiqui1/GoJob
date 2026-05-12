@@ -324,6 +324,82 @@ Return JSON ONLY:
     return JSON.parse(jsonStr);
 };
 
+/**
+ * Parse raw resume text into structured resume JSON schema
+ */
+const parseResumeText = async (resumeText) => {
+    const prompt = `You are an expert resume parser. Extract all information from the following resume text and return it as a structured JSON object.
+
+RESUME TEXT:
+<RESUME_TEXT>
+${resumeText}
+</RESUME_TEXT>
+
+Return ONLY valid JSON in this EXACT schema (no extra text, no markdown, no code blocks):
+{
+  "personalInfo": {
+    "fullName": "",
+    "email": "",
+    "phone": "",
+    "location": "",
+    "linkedin": "",
+    "github": "",
+    "portfolio": "",
+    "summary": ""
+  },
+  "experience": [
+    {
+      "company": "",
+      "position": "",
+      "location": "",
+      "startDate": "",
+      "endDate": "",
+      "current": false,
+      "description": ""
+    }
+  ],
+  "education": [
+    {
+      "institution": "",
+      "degree": "",
+      "field": "",
+      "startDate": "",
+      "endDate": "",
+      "grade": ""
+    }
+  ],
+  "skills": [],
+  "certifications": [
+    {
+      "name": "",
+      "issuer": "",
+      "date": "",
+      "url": ""
+    }
+  ]
+}
+
+Rules:
+- skills must be a flat array of strings, e.g. ["React", "Node.js", "Python"]
+- Dates should be in YYYY-MM format where possible, e.g. "2022-06". If only a year is found use "YYYY-01".
+- If a field is not found, use empty string "" or empty array []
+- Set "current": true for jobs that are ongoing ("Present", "Till Date", etc.)
+- Extract ALL experience entries, education entries, and certifications found
+- Put all listed skills, tools, technologies into the skills array as individual strings
+- Include the professional summary/objective in personalInfo.summary
+- Return ONLY the JSON object, nothing else`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+    // Strip markdown code blocks if present
+    const cleaned = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) throw new Error('AI could not parse resume structure.');
+    const jsonStr = cleaned.substring(firstBrace, lastBrace + 1);
+    return JSON.parse(jsonStr);
+};
+
 module.exports = {
     checkAtsScore,
     enhanceResume,
@@ -334,5 +410,6 @@ module.exports = {
     generateInterviewQuestions,
     optimizeLinkedInProfile,
     adviseCareerPath,
-    summarizeJobDescription
+    summarizeJobDescription,
+    parseResumeText
 };

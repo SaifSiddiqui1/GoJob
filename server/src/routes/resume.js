@@ -27,7 +27,7 @@ router.get('/:id', protect, async (req, res, next) => {
 // Create new resume
 router.post('/', protect, async (req, res, next) => {
     try {
-        const allowedFields = ['title', 'template', 'themeColor', 'fontStyle', 'personalInfo', 'summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'customSections'];
+        const allowedFields = ['title', 'template', 'templateId', 'themeColor', 'fontStyle', 'personalInfo', 'summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'customSections'];
         const resumeData = {};
         allowedFields.forEach(f => { if (req.body[f] !== undefined) resumeData[f] = req.body[f]; });
         
@@ -39,7 +39,7 @@ router.post('/', protect, async (req, res, next) => {
 // Update resume
 router.put('/:id', protect, async (req, res, next) => {
     try {
-        const allowedFields = ['title', 'template', 'themeColor', 'fontStyle', 'personalInfo', 'summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'customSections'];
+        const allowedFields = ['title', 'template', 'templateId', 'themeColor', 'fontStyle', 'personalInfo', 'summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'customSections'];
         const updates = {};
         allowedFields.forEach(f => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
         

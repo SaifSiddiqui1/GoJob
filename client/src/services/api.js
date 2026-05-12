@@ -96,6 +96,7 @@ export const jobsAPI = {
 // ─── AI ───────────────────────────────────────────────────────
 export const aiAPI = {
     checkAts: (data) => api.post('/ai/ats-check', data),
+    parseResume: (data) => api.post('/ai/parse-resume', data, { timeout: 60000 }),
     enhanceResume: (data) => api.post('/ai/enhance-resume', data),
     generateSummary: (data) => api.post('/ai/generate-summary', data),
     generateCoverLetter: (data) => api.post('/ai/cover-letter', data),

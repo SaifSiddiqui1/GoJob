@@ -6,6 +6,8 @@ const { uploadResume } = require('../middleware/upload');
 const aiService = require('../services/aiService');
 const Resume = require('../models/Resume');
 
+const MAX_TEXT_LENGTH = 100000; // ~100k chars — safe for Gemini Flash
+
 // ATS Score Check (free for basic score, premium for detailed)
 router.post('/ats-check', protect, async (req, res, next) => {
     try {
@@ -13,8 +15,8 @@ router.post('/ats-check', protect, async (req, res, next) => {
         if (!resumeText || !jobDescription) {
             return res.status(400).json({ success: false, message: 'Resume text and job description are required.' });
         }
-        if (resumeText.length > 20000 || jobDescription.length > 20000) {
-            return res.status(400).json({ success: false, message: 'Input text exceeds the maximum allowed length of 20000 characters.' });
+        if (resumeText.length > MAX_TEXT_LENGTH || jobDescription.length > MAX_TEXT_LENGTH) {
+            return res.status(400).json({ success: false, message: `Input text exceeds the maximum allowed length of ${MAX_TEXT_LENGTH.toLocaleString()} characters.` });
         }
 
         const result = await aiService.checkAtsScore(resumeText, jobDescription);
@@ -31,6 +33,21 @@ router.post('/ats-check', protect, async (req, res, next) => {
         };
 
         res.json({ success: true, data: response });
+    } catch (err) { next(err); }
+});
+
+// Parse raw resume text → structured resume JSON (powers "Enhance Existing Resume" flow)
+router.post('/parse-resume', protect, async (req, res, next) => {
+    try {
+        const { resumeText } = req.body;
+        if (!resumeText || resumeText.trim().length < 50) {
+            return res.status(400).json({ success: false, message: 'Resume text is too short to parse.' });
+        }
+        if (resumeText.length > MAX_TEXT_LENGTH) {
+            return res.status(400).json({ success: false, message: `Resume text exceeds the maximum allowed length of ${MAX_TEXT_LENGTH.toLocaleString()} characters.` });
+        }
+        const parsed = await aiService.parseResumeText(resumeText);
+        res.json({ success: true, data: { parsed } });
     } catch (err) { next(err); }
 });
 

@@ -147,21 +147,127 @@ function SkillTagInput({ skills, onChange }) {
 function UploadResumeMode({ navigate, qc }) {
     const [file, setFile] = useState(null)
     const [dragOver, setDragOver] = useState(false)
+    const [step, setStep] = useState('idle') // idle | extracting | parsing | saving | done
 
-    const uploadMutation = useMutation({
-        mutationFn: () => {
-            const fd = new FormData()
-            fd.append('resume', file)
-            fd.append('title', file.name.replace(/\.[^.]+$/, ''))
-            return resumeAPI.upload(fd)
-        },
-        onSuccess: (res) => {
-            toast.success('Resume imported successfully!')
+    // Extract plain text from the uploaded file
+    const extractText = (f) => {
+        return new Promise((resolve, reject) => {
+            if (!f) { reject(new Error('No file')); return }
+            if (f.type === 'text/plain' || f.name.endsWith('.txt')) {
+                const reader = new FileReader()
+                reader.onload = (e) => resolve(e.target.result)
+                reader.onerror = () => reject(new Error('Failed to read file'))
+                reader.readAsText(f)
+            } else {
+                // Binary extraction (PDF / DOC / DOCX) — pull printable ASCII runs
+                const reader = new FileReader()
+                reader.onload = (e) => {
+                    const raw = new Uint8Array(e.target.result)
+                    let text = ''
+                    let run = ''
+                    for (let i = 0; i < raw.length; i++) {
+                        const c = raw[i]
+                        if (c >= 32 && c < 127) { run += String.fromCharCode(c) }
+                        else { if (run.length >= 4) text += run + ' '; run = '' }
+                    }
+                    if (run.length >= 4) text += run
+                    text = text.replace(/\s+/g, ' ').trim()
+                    resolve(text)
+                }
+                reader.onerror = () => reject(new Error('Failed to read file'))
+                reader.readAsArrayBuffer(f)
+            }
+        })
+    }
+
+    const handleGenerate = async () => {
+        if (!file) { toast.error('Please upload a resume file first'); return }
+        try {
+            // Step 1 — extract text
+            setStep('extracting')
+            const rawText = await extractText(file)
+            if (!rawText || rawText.trim().length < 50) {
+                toast.error('Could not extract enough text from file. Please paste your resume as text instead.')
+                setStep('idle')
+                return
+            }
+
+            // Step 2 — AI parse
+            setStep('parsing')
+            const parseRes = await aiAPI.parseResume({ resumeText: rawText })
+            const parsed = parseRes?.data?.parsed || {}
+
+            // Step 3 — create DB record pre-filled with parsed data
+            setStep('saving')
+            const title = parsed.personalInfo?.fullName
+                ? `${parsed.personalInfo.fullName}'s Resume`
+                : file.name.replace(/\.[^.]+$/, '')
+
+            const resumePayload = {
+                title,
+                templateId: 'modern',
+                personalInfo: {
+                    fullName: parsed.personalInfo?.fullName || '',
+                    email: parsed.personalInfo?.email || '',
+                    phone: parsed.personalInfo?.phone || '',
+                    location: parsed.personalInfo?.location || '',
+                    linkedin: parsed.personalInfo?.linkedin || '',
+                    github: parsed.personalInfo?.github || '',
+                    portfolio: parsed.personalInfo?.portfolio || '',
+                    summary: parsed.personalInfo?.summary || '',
+                },
+                experience: (parsed.experience || []).map(e => ({
+                    company: e.company || '',
+                    position: e.position || '',
+                    location: e.location || '',
+                    startDate: e.startDate || '',
+                    endDate: e.endDate || '',
+                    current: !!e.current,
+                    description: e.description || '',
+                })),
+                education: (parsed.education || []).map(e => ({
+                    institution: e.institution || '',
+                    degree: e.degree || '',
+                    field: e.field || '',
+                    startDate: e.startDate || '',
+                    endDate: e.endDate || '',
+                    grade: e.grade || '',
+                })),
+                skills: Array.isArray(parsed.skills) ? parsed.skills.filter(s => typeof s === 'string') : [],
+                certifications: (parsed.certifications || []).map(c => ({
+                    name: c.name || '',
+                    issuer: c.issuer || '',
+                    date: c.date || '',
+                    url: c.url || '',
+                })),
+            }
+
+            const createRes = await resumeAPI.create(resumePayload)
+            const newId = createRes?.data?.resume?._id
+
+            setStep('done')
             qc.invalidateQueries(['resumes'])
-            navigate(`/dashboard/resume/builder/${res.data.resume._id}`)
-        },
-        onError: (err) => toast.error(err.response?.data?.message || 'Upload failed'),
-    })
+            toast.success('Resume imported and auto-filled! Review and save.')
+
+            if (newId) {
+                navigate(`/dashboard/resume/builder/${newId}`)
+            } else {
+                navigate('/dashboard/resume')
+            }
+        } catch (err) {
+            console.error('Upload-parse error:', err)
+            toast.error(err.response?.data?.message || err.message || 'Failed to process resume. Please try again.')
+            setStep('idle')
+        }
+    }
+
+    const isBusy = step !== 'idle' && step !== 'done'
+
+    const STEPS = [
+        { key: 'extracting', label: 'Extracting text from file…' },
+        { key: 'parsing',    label: 'AI is reading your resume…' },
+        { key: 'saving',     label: 'Creating your smart resume…' },
+    ]
 
     return (
         <div className="max-w-xl mx-auto space-y-6 animate-fade-in mt-10">
@@ -173,29 +279,61 @@ function UploadResumeMode({ navigate, qc }) {
                     <div className="w-16 h-16 bg-violet-100 dark:bg-violet-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <FileText size={28} className="text-violet-600" />
                     </div>
-                    <h1 className="font-heading text-2xl font-bold text-gray-900 dark:text-white">Import Existing Resume</h1>
-                    <p className="text-gray-500 text-sm mt-2">Upload your PDF or Word document.</p>
+                    <h1 className="font-heading text-2xl font-bold text-gray-900 dark:text-white">Enhance Existing Resume</h1>
+                    <p className="text-gray-500 text-sm mt-2">Upload your resume — AI will extract all your info and auto-fill the builder so you can polish and download a beautiful ATS-friendly version.</p>
                 </div>
+
+                {/* Drop Zone */}
                 <div
                     onDragOver={e => { e.preventDefault(); setDragOver(true) }}
                     onDragLeave={() => setDragOver(false)}
                     onDrop={e => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]) }}
-                    onClick={() => document.getElementById('resume-upload').click()}
+                    onClick={() => !isBusy && document.getElementById('resume-upload-enhance').click()}
                     className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all
-                        ${dragOver ? 'border-violet-500 bg-violet-50' : file ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-violet-300 bg-gray-50/50'}`}
+                        ${dragOver ? 'border-violet-500 bg-violet-50' : file ? 'border-green-400 bg-green-50 dark:bg-green-900/10' : 'border-gray-300 hover:border-violet-300 bg-gray-50/50'}`}
                 >
                     {file ? (
-                        <><Check size={40} className="mx-auto mb-3 text-green-500" /><p className="font-semibold text-green-700">{file.name}</p></>
+                        <><Check size={40} className="mx-auto mb-3 text-green-500" /><p className="font-semibold text-green-700 dark:text-green-400">{file.name}</p><p className="text-xs text-gray-400 mt-1">Ready to process</p></>
                     ) : (
-                        <><Upload size={36} className="mx-auto mb-4 text-gray-400" /><p className="font-semibold text-gray-700 text-sm">Drag & drop or click</p><p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX up to 5MB</p></>
+                        <><Upload size={36} className="mx-auto mb-4 text-gray-400" /><p className="font-semibold text-gray-700 dark:text-gray-300 text-sm">Drag & drop or click to upload</p><p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX, TXT up to 5MB</p></>
                     )}
-                    <input id="resume-upload" type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => setFile(e.target.files[0])} />
+                    <input id="resume-upload-enhance" type="file" accept=".pdf,.doc,.docx,.txt" className="hidden" onChange={e => setFile(e.target.files[0])} disabled={isBusy} />
                 </div>
-                <button onClick={() => uploadMutation.mutate()} disabled={!file || uploadMutation.isPending}
-                    className="w-full btn-primary py-3 mt-6 flex justify-center gap-2">
-                    <Sparkles size={18} />
-                    {uploadMutation.isPending ? 'Extracting via AI...' : 'Generate Smart Resume'}
+
+                {/* Progress Steps */}
+                {isBusy && (
+                    <div className="mt-6 space-y-2">
+                        {STEPS.map((s, idx) => {
+                            const currentIdx = STEPS.findIndex(x => x.key === step)
+                            const done = idx < currentIdx
+                            const active = s.key === step
+                            return (
+                                <div key={s.key} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                                    ${active ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
+                                        : done ? 'text-green-600 dark:text-green-400'
+                                        : 'text-gray-300 dark:text-gray-600'}`}>
+                                    {done ? <Check size={16} className="flex-shrink-0" />
+                                        : active ? <Sparkles size={16} className="flex-shrink-0 animate-pulse" />
+                                        : <div className="w-4 h-4 rounded-full border-2 border-current flex-shrink-0" />}
+                                    {s.label}
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+
+                <button
+                    onClick={handleGenerate}
+                    disabled={!file || isBusy}
+                    className="w-full btn-primary py-3 mt-6 flex justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                    <Sparkles size={18} className={isBusy ? 'animate-pulse' : ''} />
+                    {isBusy ? 'Processing…' : 'Generate Smart Resume'}
                 </button>
+
+                <p className="text-center text-xs text-gray-400 mt-3">
+                    💡 For best results with PDF files, paste your resume text directly in the ATS Checker
+                </p>
             </div>
         </div>
     )
