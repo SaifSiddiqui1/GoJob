@@ -1,5 +1,5 @@
 {
-  "name": "GoJob 2: Job Processing Worker",
+  "name": "JobVault 2: Job Processing Worker",
   "nodes": [
     {
       "parameters": {

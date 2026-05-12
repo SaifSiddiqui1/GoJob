@@ -1,5 +1,5 @@
 {
-    "name": "GoJob - Job Import Webhook",
+    "name": "JobVault - Job Import Webhook",
     "nodes": [
         {
             "parameters": {

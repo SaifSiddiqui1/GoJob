@@ -420,7 +420,7 @@ function MobileDrawer({ isOpen, onClose, user, logout, setPremiumModal }) {
                         <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
                             <Rocket size={18} className="text-white" />
                         </div>
-                        <span className="text-lg font-extrabold text-white tracking-tight">GoJob</span>
+                        <span className="text-lg font-extrabold text-white tracking-tight">JobVault</span>
                     </div>
                     <button onClick={onClose} className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors">
                         <X size={16} />
@@ -499,11 +499,10 @@ export default function DashboardLayout() {
                     {/* ── LOGO ── */}
                     <NavLink to="/dashboard" className="flex items-center gap-2.5 flex-shrink-0 mr-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-violet-500/25 overflow-hidden">
-                            <img src="/logo.png" alt="GoJob" className="h-5 w-auto object-contain"
-                                onError={e => { e.currentTarget.style.display='none' }} />
+                            <img src="/logo.png" alt="JobVault" className="h-5 w-auto object-contain" />
                         </div>
                         <span className="hidden sm:block text-xl font-extrabold tracking-tight bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                            GoJob
+                            JobVault
                         </span>
                     </NavLink>
 

@@ -1,5 +1,5 @@
 {
-  "name": "GoJob 1: Telegram to Redis Producer",
+  "name": "JobVault 1: Telegram to Redis Producer",
   "nodes": [
     {
       "parameters": {

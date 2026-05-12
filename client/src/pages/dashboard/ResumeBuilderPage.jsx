@@ -422,7 +422,7 @@ export default function ResumeBuilderPage() {
                     <div className="relative z-10 flex-1 min-w-0 mx-2">
                         <div className="flex items-center gap-1.5 mb-1 opacity-80">
                             <Sparkles size={11} className="text-violet-400" />
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-violet-300">GoJob AI Builder</span>
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-violet-300">JobVault AI Builder</span>
                         </div>
                         <input value={resume.title} onChange={e => setResume(p => ({ ...p, title: e.target.value }))}
                             className="font-heading font-extrabold text-lg text-white bg-transparent border-none focus:outline-none focus:ring-0 p-0 w-full placeholder:text-gray-500 truncate"
