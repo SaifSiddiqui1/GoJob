@@ -219,7 +219,7 @@ export default function AIToolsPage() {
                 </div>
                 <div>
                     <h1 className="font-heading text-2xl font-bold text-gray-900 dark:text-white">Premium AI Suite</h1>
-                    <p className="text-gray-500 text-sm mt-1">Supercharge your career search with Gemini 1.5 Flash.</p>
+                    <p className="text-gray-500 text-sm mt-1">Supercharge your career search with Llama 3.3 via Groq — blazing fast & free.</p>
                 </div>
             </div>
 

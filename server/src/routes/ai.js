@@ -6,7 +6,7 @@ const { uploadResume } = require('../middleware/upload');
 const aiService = require('../services/aiService');
 const Resume = require('../models/Resume');
 
-const MAX_TEXT_LENGTH = 100000; // ~100k chars — safe for Gemini Flash
+const MAX_TEXT_LENGTH = 100000; // ~100k chars — safe for Groq Llama 3.3 (128k context window)
 
 // ATS Score Check (free for basic score, premium for detailed)
 router.post('/ats-check', protect, async (req, res, next) => {
