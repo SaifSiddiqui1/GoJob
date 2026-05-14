@@ -1,21 +1,34 @@
 const Groq = require('groq-sdk');
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// Lazy-initialize the Groq client so a missing key shows a clear error
+// rather than crashing the entire server on startup.
+let _groq = null;
+const getGroq = () => {
+    if (!_groq) {
+        if (!process.env.GROQ_API_KEY) {
+            throw new Error(
+                'GROQ_API_KEY is not set. Add it to your .env file (local) ' +
+                'or your Render/hosting environment variables (production).'
+            );
+        }
+        _groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    }
+    return _groq;
+};
 
 const model = {
     generateContent: async (prompt) => {
-        const result = await groq.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
-            model: "llama-3.3-70b-versatile", // 128k context window, blazing fast, excellent at JSON
+        const result = await getGroq().chat.completions.create({
+            messages: [{ role: 'user', content: prompt }],
+            model: 'llama-3.3-70b-versatile', // 128k context, blazing fast, excellent at JSON
         });
         return {
             response: {
-                text: () => result.choices[0]?.message?.content || ""
+                text: () => result.choices[0]?.message?.content || ''
             }
         };
     }
 };
-
 
 /**
  * Check ATS score for a resume against a job description
