@@ -1,6 +1,130 @@
 const axios = require('axios');
 const Job = require('../models/Job');
 
+// ─── JSearch (RapidAPI) ────────────────────────────────────────────────────────
+/**
+ * Fetch jobs from JSearch (RapidAPI) — great for India jobs.
+ * Docs: https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch
+ */
+const fetchFromJSearch = async () => {
+    if (!process.env.RAPIDAPI_KEY) {
+        console.log('⚠️  JSearch: RAPIDAPI_KEY missing, skipping.');
+        return [];
+    }
+
+    const queries = [
+        { q: 'software engineer jobs in india', cat: 'sde' },
+        { q: 'data analyst jobs in india',      cat: 'sde' },
+        { q: 'product manager jobs in india',   cat: 'it'  },
+        { q: 'marketing manager india',         cat: 'marketing' },
+        { q: 'customer support india',          cat: 'customer_support' },
+    ];
+
+    const jobs = [];
+
+    for (const { q, cat } of queries) {
+        try {
+            const res = await axios.get('https://jsearch.p.rapidapi.com/search', {
+                headers: {
+                    'x-rapidapi-host': 'jsearch.p.rapidapi.com',
+                    'x-rapidapi-key':  process.env.RAPIDAPI_KEY,
+                },
+                params: {
+                    query:       q,
+                    num_pages:   '2',
+                    date_posted: 'month',
+                    country:     'in',
+                },
+                timeout: 15000,
+            });
+
+            const mapped = (res.data?.data || []).map(j => ({
+                title:       j.job_title,
+                company:     j.employer_name || 'Unknown',
+                companyLogo: j.employer_logo,
+                location:    j.job_city ? `${j.job_city}, ${j.job_country}` : (j.job_country || 'India'),
+                remote:      j.job_is_remote ? 'remote' : 'on-site',
+                description: j.job_description?.slice(0, 2000) || j.job_title,
+                applyLink:   j.job_apply_link,
+                sourceJobId: `jsearch-${j.job_id}`,
+                source:      'jsearch',
+                sourceUrl:   j.job_apply_link,
+                category:    cat,
+                jobType:     mapJSearchJobType(j.job_employment_type),
+                postedDate:  j.job_posted_at_datetime_utc ? new Date(j.job_posted_at_datetime_utc) : new Date(),
+                skills:      j.job_required_skills || [],
+                salary: {
+                    min:         j.job_min_salary,
+                    max:         j.job_max_salary,
+                    currency:    j.job_salary_currency || 'INR',
+                    isDisclosed: !!(j.job_min_salary || j.job_max_salary),
+                },
+                status: 'pending',
+            }));
+
+            jobs.push(...mapped);
+            console.log(`✅ JSearch [${q}]: ${mapped.length} jobs`);
+        } catch (err) {
+            console.error(`JSearch error [${q}]: ${err.response?.status || err.message}`);
+        }
+    }
+
+    return jobs;
+};
+
+/**
+ * On-demand JSearch for admin dashboard (custom query/country)
+ */
+const fetchFromJSearchManual = async (query = 'software engineer', country = 'in', numPages = 1) => {
+    if (!process.env.RAPIDAPI_KEY) throw new Error('RAPIDAPI_KEY is not set.');
+
+    const res = await axios.get('https://jsearch.p.rapidapi.com/search', {
+        headers: {
+            'x-rapidapi-host': 'jsearch.p.rapidapi.com',
+            'x-rapidapi-key':  process.env.RAPIDAPI_KEY,
+        },
+        params: {
+            query,
+            num_pages:   String(Math.min(numPages, 5)),
+            date_posted: 'all',
+            country,
+        },
+        timeout: 20000,
+    });
+
+    return (res.data?.data || []).map(j => ({
+        title:       j.job_title,
+        company:     j.employer_name || 'Unknown',
+        companyLogo: j.employer_logo,
+        location:    j.job_city ? `${j.job_city}, ${j.job_country}` : (j.job_country || country.toUpperCase()),
+        remote:      j.job_is_remote ? 'remote' : 'on-site',
+        description: j.job_description?.slice(0, 2000) || j.job_title,
+        applyLink:   j.job_apply_link,
+        sourceJobId: `jsearch-${j.job_id}`,
+        source:      'jsearch',
+        sourceUrl:   j.job_apply_link,
+        category:    'it',
+        jobType:     mapJSearchJobType(j.job_employment_type),
+        postedDate:  j.job_posted_at_datetime_utc ? new Date(j.job_posted_at_datetime_utc) : new Date(),
+        skills:      j.job_required_skills || [],
+        salary: {
+            min:         j.job_min_salary,
+            max:         j.job_max_salary,
+            currency:    j.job_salary_currency || 'INR',
+            isDisclosed: !!(j.job_min_salary || j.job_max_salary),
+        },
+        status: 'pending',
+    }));
+};
+
+const mapJSearchJobType = (type = '') => {
+    const t = type.toUpperCase();
+    if (t.includes('PART')) return 'part-time';
+    if (t.includes('CONTRACT')) return 'contract';
+    if (t.includes('INTERN')) return 'internship';
+    return 'full-time';
+};
+
 /**
  * Fetch jobs from Adzuna API (free, needs app_id + api_key)
  */
@@ -166,11 +290,12 @@ const fetchFromArbeitnow = async () => {
  */
 const aggregateJobs = async () => {
     console.log('🔍 Starting job aggregation...');
-    const [adzunaJobs, remotiveJobs, remoteOKJobs, arbeitnowJobs] = await Promise.allSettled([
+    const [adzunaJobs, remotiveJobs, remoteOKJobs, arbeitnowJobs, jsearchJobs] = await Promise.allSettled([
         fetchFromAdzuna(),
         fetchFromRemotive(),
         fetchFromRemoteOK(),
         fetchFromArbeitnow(),
+        fetchFromJSearch(),
     ]);
 
     const allJobs = [
@@ -178,6 +303,7 @@ const aggregateJobs = async () => {
         ...(remotiveJobs.value || []),
         ...(remoteOKJobs.value || []),
         ...(arbeitnowJobs.value || []),
+        ...(jsearchJobs.value  || []),
     ];
 
     let saved = 0;
@@ -215,4 +341,4 @@ const mapJobType = (type = '') => {
     return 'full-time';
 };
 
-module.exports = { aggregateJobs };
+module.exports = { aggregateJobs, fetchFromJSearchManual };

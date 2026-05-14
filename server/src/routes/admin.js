@@ -8,7 +8,7 @@ const Job = require('../models/Job');
 const User = require('../models/User');
 const StudyMaterial = require('../models/StudyMaterial');
 const Resume = require('../models/Resume');
-const { aggregateJobs } = require('../services/jobAggregator');
+const { aggregateJobs, fetchFromJSearchManual } = require('../services/jobAggregator');
 
 // ─── N8N / External Webhook ─────────────────────────────────────────────────────
 // Must be placed BEFORE protect/adminOnly middleware so it can use token auth
@@ -212,11 +212,52 @@ router.delete('/jobs/:id', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
-// Manually trigger job aggregation
+// Manually trigger full job aggregation (all sources incl. JSearch)
 router.post('/jobs/fetch', async (req, res, next) => {
     try {
         const result = await aggregateJobs();
         res.json({ success: true, message: 'Job fetching complete.', data: result });
+    } catch (err) { next(err); }
+});
+
+// On-demand JSearch: search, save to DB, return results
+// POST /api/admin/jobs/fetch-jsearch
+// Body: { query, country, numPages, autoApprove }
+router.post('/jobs/fetch-jsearch', async (req, res, next) => {
+    try {
+        const { query = 'software engineer jobs in india', country = 'in', numPages = 1, autoApprove = false } = req.body;
+        const fetchedJobs = await fetchFromJSearchManual(query, country, Number(numPages));
+
+        let saved = 0;
+        for (const job of fetchedJobs) {
+            try {
+                const exists = await Job.findOne({ sourceJobId: job.sourceJobId, source: 'jsearch' });
+                if (!exists) {
+                    await Job.create({
+                        ...job,
+                        status: autoApprove ? 'approved' : 'pending',
+                        ...(autoApprove ? { approvedBy: req.user._id, approvedAt: new Date() } : {}),
+                    });
+                    saved++;
+                }
+            } catch (_) { /* skip duplicates */ }
+        }
+
+        res.json({
+            success: true,
+            message: `JSearch complete. Fetched ${fetchedJobs.length} jobs, saved ${saved} new.`,
+            data: { fetched: fetchedJobs.length, saved, jobs: fetchedJobs.slice(0, 20) },
+        });
+    } catch (err) { next(err); }
+});
+
+// Preview JSearch results WITHOUT saving to DB
+// GET /api/admin/jobs/preview-jsearch?query=...&country=in&numPages=1
+router.get('/jobs/preview-jsearch', async (req, res, next) => {
+    try {
+        const { query = 'software engineer india', country = 'in', numPages = 1 } = req.query;
+        const jobs = await fetchFromJSearchManual(query, country, Number(numPages));
+        res.json({ success: true, data: { count: jobs.length, jobs } });
     } catch (err) { next(err); }
 });
 
