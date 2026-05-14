@@ -261,6 +261,54 @@ router.get('/jobs/preview-jsearch', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
+// Diagnostic: test each source independently and report counts/errors
+// GET /api/admin/jobs/test-sources
+router.get('/jobs/test-sources', async (req, res, next) => {
+    try {
+        const axios = require('axios');
+        const key = process.env.RAPIDAPI_KEY;
+        const report = {};
+
+        const testSource = async (name, fn) => {
+            try {
+                const jobs = await fn();
+                report[name] = { status: 'ok', count: jobs.length, sample: jobs[0]?.title || null };
+            } catch (err) {
+                report[name] = { status: 'error', error: err.response?.status ? `HTTP ${err.response.status}: ${err.response.data?.message || err.message}` : err.message };
+            }
+        };
+
+        const rapidGet = async (url, host, params = {}) => {
+            if (!key) throw new Error('RAPIDAPI_KEY not set in environment');
+            const r = await axios.get(url, {
+                headers: { 'x-rapidapi-host': host, 'x-rapidapi-key': key },
+                params,
+                timeout: 15000,
+            });
+            return r.data;
+        };
+
+        await Promise.all([
+            testSource('adzuna',          () => axios.get(`https://api.adzuna.com/v1/api/jobs/gb/search/1`, { params: { app_id: process.env.ADZUNA_APP_ID, app_key: process.env.ADZUNA_API_KEY, results_per_page: 3, what: 'developer' }, timeout: 12000 }).then(r => r.data?.results || [])),
+            testSource('remotive',         () => axios.get('https://remotive.com/api/remote-jobs', { params: { limit: 3 }, timeout: 10000 }).then(r => r.data?.jobs || [])),
+            testSource('remoteok',         () => axios.get('https://remoteok.com/api', { headers: { 'User-Agent': 'JobVault/1.0' }, timeout: 10000 }).then(r => (r.data || []).filter(j => j.id))),
+            testSource('arbeitnow',        () => axios.get('https://www.arbeitnow.com/api/job-board-api', { timeout: 10000 }).then(r => r.data?.data || [])),
+            testSource('jsearch',          () => rapidGet('https://jsearch.p.rapidapi.com/search', 'jsearch.p.rapidapi.com', { query: 'developer india', num_pages: '1' }).then(d => d?.data || [])),
+            testSource('indeed46',         () => rapidGet('https://indeed46.p.rapidapi.com/job', 'indeed46.p.rapidapi.com', { country: 'CA', sort: -1, page_size: 5 }).then(d => Array.isArray(d) ? d : (d?.jobs || d?.data || []))),
+            testSource('linkedin-search',  () => rapidGet('https://linkedin-job-search-api.p.rapidapi.com/active-jb-1h', 'linkedin-job-search-api.p.rapidapi.com', { offset: 0, title_filter: 'Software Engineer', location_filter: 'United States', description_type: 'text' }).then(d => Array.isArray(d) ? d : (d?.jobs || d?.data || []))),
+            testSource('active-jobs-db',   () => rapidGet('https://active-jobs-db.p.rapidapi.com/active-ats-1h', 'active-jobs-db.p.rapidapi.com', { offset: 0, title_filter: '"Software Engineer"', description_type: 'text' }).then(d => Array.isArray(d) ? d : (d?.jobs || d?.data || []))),
+            testSource('job-posting-feed', () => rapidGet('https://job-posting-feed-api.p.rapidapi.com/active-ats-6m', 'job-posting-feed-api.p.rapidapi.com', { description_type: 'text' }).then(d => Array.isArray(d) ? d : (d?.jobs || d?.data || []))),
+            testSource('internships-api',  () => rapidGet('https://internships-api.p.rapidapi.com/active-jb-7d', 'internships-api.p.rapidapi.com').then(d => Array.isArray(d) ? d : (d?.jobs || d?.data || []))),
+            testSource('indeed-scraper',   () => axios.post('https://indeed-scraper-api.p.rapidapi.com/api/job', { scraper: { maxRows: 3, query: 'Developer', location: 'New York', jobType: 'fulltime', radius: '50', sort: 'relevance', fromDays: '7', country: 'us' } }, { headers: { 'x-rapidapi-host': 'indeed-scraper-api.p.rapidapi.com', 'x-rapidapi-key': key, 'Content-Type': 'application/json' }, timeout: 20000 }).then(r => r.data?.results || r.data?.data || r.data?.jobs || [])),
+            testSource('linkedin-jobs2',   () => rapidGet('https://linkedin-jobs-api2.p.rapidapi.com/active-jb-1h', 'linkedin-jobs-api2.p.rapidapi.com').then(d => Array.isArray(d) ? d : (d?.jobs || d?.data || []))),
+        ]);
+
+        const working = Object.entries(report).filter(([, v]) => v.status === 'ok').length;
+        const total   = Object.keys(report).length;
+        res.json({ success: true, summary: `${working}/${total} sources working`, rapidApiKeySet: !!key, data: report });
+    } catch (err) { next(err); }
+});
+
 // ─── Study Materials ──────────────────────────────────────────────────────────
 router.post('/study', uploadFile.single('file'), async (req, res, next) => {
     try {
