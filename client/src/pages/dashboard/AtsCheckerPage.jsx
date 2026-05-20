@@ -15,46 +15,50 @@ function InputPanel({ label, icon: Icon, text, onTextChange, placeholder, accept
     const [mode, setMode] = useState('paste')
     const [dragOver, setDragOver] = useState(false)
     const [fileName, setFileName] = useState('')
+    const [parsing, setParsing] = useState(false)
     const fileRef = useRef(null)
 
-    const extractText = (file) => {
+    const extractText = async (file) => {
         if (!file) return
         const allowed = ['text/plain', 'application/pdf',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-        if (!allowed.some(t => file.type === t) && !file.name.match(/\.(txt|pdf|doc|docx)$/i)) {
-            toast.error('Unsupported file type. Use PDF, DOC, DOCX or TXT.')
+        const extOk = /\.(txt|pdf|doc|docx)$/i.test(file.name)
+        if (!allowed.some(t => file.type === t) && !extOk) {
+            toast.error('Unsupported file type. Use PDF, DOCX, DOC or TXT.')
             return
         }
         if (file.size > 5 * 1024 * 1024) { toast.error('File must be under 5 MB.'); return }
+
         setFileName(file.name)
 
-        if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+        // Plain text files — read directly in browser (no server round-trip needed)
+        if (file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt')) {
             const reader = new FileReader()
             reader.onload = e => onTextChange(e.target.result)
             reader.readAsText(file)
-        } else {
-            const reader = new FileReader()
-            reader.onload = e => {
-                const raw = new Uint8Array(e.target.result)
-                let text = ''
-                let run = ''
-                for (let i = 0; i < raw.length; i++) {
-                    const c = raw[i]
-                    if (c >= 32 && c < 127) { run += String.fromCharCode(c) }
-                    else {
-                        if (run.length >= 4) text += run + ' '
-                        run = ''
-                    }
-                }
-                if (run.length >= 4) text += run
-                text = text.replace(/\s+/g, ' ').trim()
-                if (text.length < 100) {
-                    toast('File parsed with limited text. For best results, paste text manually.', { icon: '⚠️' })
-                }
-                onTextChange(text)
+            return
+        }
+
+        // PDF / DOCX / DOC — send to server for proper parsing
+        try {
+            setParsing(true)
+            const formData = new FormData()
+            formData.append('file', file)
+            const res = await aiAPI.parseFile(formData)
+            const extracted = res?.data?.text || ''
+            if (extracted.length < 50) {
+                toast('Very little text was extracted. Try pasting the text manually for better results.', { icon: '⚠️' })
             }
-            reader.readAsArrayBuffer(file)
+            onTextChange(extracted)
+            toast.success(`Extracted ${res?.data?.chars?.toLocaleString()} characters from ${file.name}`)
+        } catch (err) {
+            const msg = err?.response?.data?.message || 'Failed to parse file. Please paste the text manually.'
+            toast.error(msg)
+            onTextChange('')
+            setFileName('')
+        } finally {
+            setParsing(false)
         }
     }
 
@@ -103,13 +107,20 @@ function InputPanel({ label, icon: Icon, text, onTextChange, placeholder, accept
                     onDragOver={e => { e.preventDefault(); setDragOver(true) }}
                     onDragLeave={() => setDragOver(false)}
                     onDrop={handleDrop}
-                    onClick={() => fileRef.current?.click()}
+                    onClick={() => !parsing && fileRef.current?.click()}
                     className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all min-h-[200px] flex flex-col items-center justify-center gap-3
                         ${dragOver ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20'
+                            : parsing ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-900/10 cursor-wait'
                             : text ? 'border-green-400 bg-green-50 dark:bg-green-900/10'
                                 : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 bg-gray-50 dark:bg-gray-800/50'}`}
                 >
-                    {text ? (
+                    {parsing ? (
+                        <>
+                            <div className="w-10 h-10 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
+                            <p className="font-semibold text-indigo-600 dark:text-indigo-400 text-sm">Extracting text from {fileName}…</p>
+                            <p className="text-xs text-gray-400">This may take a few seconds</p>
+                        </>
+                    ) : text ? (
                         <>
                             <CheckCircle size={36} className="text-green-500" />
                             <p className="font-semibold text-green-700 dark:text-green-400 text-sm">{fileName || 'File loaded'}</p>
@@ -127,7 +138,7 @@ function InputPanel({ label, icon: Icon, text, onTextChange, placeholder, accept
                             <Upload size={36} className="text-gray-300" />
                             <div>
                                 <p className="font-semibold text-gray-600 dark:text-gray-400 text-sm">Drop file here or click to browse</p>
-                                <p className="text-xs text-gray-400 mt-1">Supports PDF, DOC, DOCX, TXT · Max 5 MB</p>
+                                <p className="text-xs text-gray-400 mt-1">Supports PDF, DOCX, DOC, TXT · Max 5 MB</p>
                             </div>
                         </>
                     )}

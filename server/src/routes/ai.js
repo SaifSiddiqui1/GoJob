@@ -3,10 +3,104 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const { premiumOrAdmin } = require('../middleware/auth');
 const { uploadResume } = require('../middleware/upload');
+const multer = require('multer');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
 const aiService = require('../services/aiService');
 const Resume = require('../models/Resume');
 
 const MAX_TEXT_LENGTH = 100000; // ~100k chars — safe for Groq Llama 3.3 (128k context window)
+
+// Multer instance for ATS file uploads (PDF, DOCX, DOC, TXT — memory only)
+const atsUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+    fileFilter: (req, file, cb) => {
+        const allowed = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+        ];
+        const extOk = /\.(pdf|doc|docx|txt)$/i.test(file.originalname);
+        if (allowed.includes(file.mimetype) || extOk) {
+            cb(null, true);
+        } else {
+            cb(new Error('Unsupported file type. Use PDF, DOCX, DOC, or TXT.'), false);
+        }
+    },
+});
+
+// ─── File → Plain Text Parser ─────────────────────────────────────────────────
+// POST /api/ai/parse-file
+// Accepts multipart/form-data with field "file". Returns { text: "..." }
+router.post('/parse-file', protect, atsUpload.single('file'), async (req, res, next) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded.' });
+        }
+
+        const { mimetype, originalname, buffer } = req.file;
+        let text = '';
+
+        // ── PDF ──────────────────────────────────────────────────────────────
+        if (mimetype === 'application/pdf' || originalname.toLowerCase().endsWith('.pdf')) {
+            const data = await pdfParse(buffer);
+            text = data.text || '';
+        }
+
+        // ── DOCX ─────────────────────────────────────────────────────────────
+        else if (
+            mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+            originalname.toLowerCase().endsWith('.docx')
+        ) {
+            const result = await mammoth.extractRawText({ buffer });
+            text = result.value || '';
+        }
+
+        // ── DOC (legacy Word) ─────────────────────────────────────────────────
+        else if (
+            mimetype === 'application/msword' ||
+            originalname.toLowerCase().endsWith('.doc')
+        ) {
+            // mammoth handles older .doc files too (best-effort)
+            try {
+                const result = await mammoth.extractRawText({ buffer });
+                text = result.value || '';
+            } catch {
+                // Fallback: strip non-printable bytes (old binary .doc)
+                text = buffer.toString('latin1').replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+            }
+        }
+
+        // ── TXT ───────────────────────────────────────────────────────────────
+        else {
+            text = buffer.toString('utf8');
+        }
+
+        // Clean up the text
+        text = text
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')  // collapse excessive blank lines
+            .trim();
+
+        if (text.length < 50) {
+            return res.status(422).json({
+                success: false,
+                message: 'Could not extract enough text from this file. Try copying and pasting the text manually.',
+            });
+        }
+
+        if (text.length > MAX_TEXT_LENGTH) {
+            text = text.substring(0, MAX_TEXT_LENGTH);
+        }
+
+        res.json({ success: true, data: { text, chars: text.length } });
+    } catch (err) {
+        next(err);
+    }
+});
 
 // ATS Score Check (free for basic score, premium for detailed)
 router.post('/ats-check', protect, async (req, res, next) => {
