@@ -490,6 +490,15 @@ export default function ResumeBuilderPage() {
     const [pvFonts,  setPvFonts]  = useState(false)
     const [pvSizes,  setPvSizes]  = useState(false)
 
+    // ── Resume accent color (user-customizable) ──
+    const [accentColor, setAccentColor] = useState('')  // empty = use template default
+    const [showAccentPicker, setShowAccentPicker] = useState(false)
+    const ACCENT_PRESETS = [
+        '#1a1a1a','#1e3a5f','#2563eb','#0a66c2','#059669','#7c3aed',
+        '#991b1b','#c2410c','#ec4899','#0891b2','#4b5563','#111827',
+        '#b45309','#15803d','#9333ea','#dc2626','#1d4ed8','#374151',
+    ]
+
     // Shared font/size data (mirrors RichTextEditor constants)
     const PV_FAMILIES = [
         { label: 'Default',         value: '' },
@@ -584,7 +593,7 @@ export default function ResumeBuilderPage() {
 
     if (isUploadMode) return <UploadResumeMode navigate={navigate} qc={qc} />
 
-    const previewHTML = generateTemplateHTML(resume, resume.templateId || 'modern')
+    const previewHTML = generateTemplateHTML(resume, resume.templateId || 'modern', { accentColor: accentColor || undefined })
 
     // Normalise skills for backward compat (could be array-of-objects from old saves)
     const skillsList = Array.isArray(resume.skills)
@@ -888,6 +897,42 @@ export default function ResumeBuilderPage() {
                         </div>
                         <div className="w-px h-4 bg-gray-300 dark:bg-gray-700" />
                         <span>A4 Format</span>
+                        <div className="w-px h-4 bg-gray-300 dark:bg-gray-700" />
+                        {/* ── Accent Color Picker ── */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowAccentPicker(v => !v)}
+                                className="flex items-center gap-2 text-xs font-semibold hover:text-gray-900 dark:hover:text-white transition-colors"
+                                title="Change resume accent color"
+                            >
+                                <span className="w-4 h-4 rounded-full border-2 border-gray-300 shadow-sm flex-shrink-0"
+                                    style={{ background: accentColor || '#6366f1' }} />
+                                Color
+                            </button>
+                            {showAccentPicker && (
+                                <div className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-3 z-50" style={{ minWidth: 200 }}>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Resume Color</div>
+                                    <div className="grid grid-cols-6 gap-1.5 mb-3">
+                                        {ACCENT_PRESETS.map(c => (
+                                            <button key={c}
+                                                onClick={() => { setAccentColor(c); setShowAccentPicker(false) }}
+                                                className={`w-7 h-7 rounded-lg border-2 hover:scale-110 transition-transform ${accentColor === c ? 'border-violet-500 ring-2 ring-violet-300' : 'border-transparent'}`}
+                                                style={{ background: c }} title={c}
+                                            />
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-[10px] text-gray-400 font-medium">Custom:</label>
+                                        <input type="color" value={accentColor || '#6366f1'}
+                                            onChange={e => setAccentColor(e.target.value)}
+                                            className="w-8 h-7 rounded cursor-pointer border border-gray-200"
+                                        />
+                                        <button onClick={() => { setAccentColor(''); setShowAccentPicker(false) }}
+                                            className="ml-auto text-[10px] text-gray-400 hover:text-red-500 transition-colors font-medium">Reset</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -897,7 +942,7 @@ export default function ResumeBuilderPage() {
                             ref={iframeRef}
                             srcDoc={previewHTML}
                             style={{ width: 794, height: 1123, border: 'none', display: 'block', background: 'white' }}
-                            scrolling="no"
+                            scrolling="auto"
                             title="Resume Preview"
                         />
                     </div>

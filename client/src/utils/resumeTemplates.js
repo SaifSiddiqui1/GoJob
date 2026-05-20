@@ -1,4 +1,4 @@
-﻿// ─── Resume Template Definitions ─────────────────────────────────────────────
+// ─── Resume Template Definitions ─────────────────────────────────────────────
 // Each template has: id, name, description, thumbnail colors, generateHTML(resume)
 
 export const TEMPLATES = [
@@ -36,27 +36,41 @@ const SAMPLE_RESUME = {
     ],
     education: [{ degree: 'B.Tech', field: 'Computer Science', institution: 'IIT Bombay', startDate: '2016-08', endDate: '2020-05', grade: '8.9 CGPA' }],
     skills: [
-        { category: 'Programming', items: ['JavaScript', 'TypeScript', 'Python', 'Java'] },
-        { category: 'Frameworks', items: ['React', 'Node.js', 'MongoDB', 'Express'] },
+        { category: 'Technical Skills', items: ['JavaScript', 'TypeScript', 'Python', 'Java'] },
+        { category: 'Soft Skills', items: ['Leadership', 'Communication', 'Teamwork'] },
+    ],
+    certifications: [
+        { name: 'AWS Certified Developer', issuer: 'Amazon', date: '2023-06', description: 'Learned cloud architecture and serverless deployment patterns.' },
     ],
 }
 
 // ─── HTML Generator ───────────────────────────────────────────────────────────
 // preview=true → skip print bar so iframes render from top (used for thumbnails)
-export function generateTemplateHTML(resume, templateId = 'classic', { preview = false } = {}) {
+// accentColor → user-selected accent color to override template default
+export function generateTemplateHTML(resume, templateId = 'classic', { preview = false, accentColor } = {}) {
     const tmpl = TEMPLATES.find(t => t.id === templateId) || TEMPLATES[0]
+    // Use user accent color if provided, otherwise fall back to template default
+    const PRIMARY   = accentColor || tmpl.primary || '#1a1a1a'
     const p = resume?.personalInfo || {}
     const exp = resume?.experience || []
     const edu = resume?.education || []
 
-    // ── Normalise skills: accepts both flat string[] and old [{category,items}] format
+
     const rawSkills = resume?.skills || []
-    const skills = rawSkills.length === 0
-        ? []
-        : typeof rawSkills[0] === 'string'
-            ? [{ category: 'Skills', items: rawSkills.filter(s => s && typeof s === 'string') }]
-            : rawSkills.filter(s => s && typeof s === 'object' && s.category)
-    // Flat list of all skill strings for tag-style rendering
+    const skills = (() => {
+        if (!rawSkills.length) return []
+        const first = rawSkills[0]
+        if (typeof first === 'string')
+            return [{ category: 'Skills', items: rawSkills.filter(s => s && typeof s === 'string') }]
+        if (first && typeof first === 'object' && ('technical' in first || 'soft' in first || 'other' in first)) {
+            const cats = []
+            if (first.technical && first.technical.length) cats.push({ category: 'Technical Skills', items: first.technical })
+            if (first.soft && first.soft.length)           cats.push({ category: 'Soft Skills',      items: first.soft })
+            if (first.other && first.other.length)         cats.push({ category: 'Other Skills',     items: first.other })
+            return cats
+        }
+        return rawSkills.filter(s => s && typeof s === 'object' && s.category)
+    })()
     const allSkillTags = skills.flatMap(s => s.items || [])
 
     // ── Smart description renderer:
@@ -92,6 +106,14 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
         </div>`).join('')
     const skillsHtml = skills.map(s => `<div class="skill-group"><strong>${s.category}:</strong> ${(s.items || []).join(', ')}</div>`).join('')
     const skillTagsHtml = allSkillTags.map(sk => `<span class="tag">${sk}</span>`).join('')
+    const certs = resume?.certifications || []
+    const certHtml = certs.length
+        ? `<div class="certs-section">` + certs.map(c => `<div class="cert-entry">
+            <div class="cert-name">${c.name || ''}${c.issuer ? ' &ndash; <em>' + c.issuer + '</em>' : ''}${c.date ? ' <span class="cert-date">(${c.date})</span>' : ''}</div>
+            ${c.url ? '<div class="cert-link"><a href="' + c.url + '" style="color:inherit;text-decoration:underline;font-size:10px">' + c.url + '</a></div>' : ''}
+            ${c.description ? '<div class="cert-desc">' + c.description + '</div>' : ''}
+        </div>`).join('') + `</div>`
+        : ''
 
     const PRINT_BAR = preview ? '<div>' : `
     <div class="print-bar">
@@ -111,8 +133,49 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
     // ── Selection-based formatting injected into every template iframe ──────
     // NOTE: must be a single-line string — no literal \r\n allowed inside '' strings
     const _SE = '</' + 'script>'
-    // eslint-disable-next-line no-useless-concat
-    const EDIT_JS = preview ? '' : ('<scr' + 'ipt>(function(){try{document.execCommand("styleWithCSS",false,true)}catch(e){}document.querySelectorAll("[data-rte]").forEach(function(el){el.contentEditable="true";el.style.outline="none";el.style.cursor="text";el.style.minHeight="1em";el.addEventListener("input",function(){window.parent.postMessage({type:"RTE_UPDATE",field:el.dataset.rte,html:el.innerHTML},"*")})});document.addEventListener("selectionchange",function(){var s=window.getSelection();if(!s||s.isCollapsed||!s.rangeCount){window.parent.postMessage({type:"RTE_SEL_CLEAR"},"*");return;}var r=s.getRangeAt(0).getBoundingClientRect();if(!r.width){window.parent.postMessage({type:"RTE_SEL_CLEAR"},"*");return;}window.parent.postMessage({type:"RTE_SELECTION",rect:{top:r.top,left:r.left,width:r.width,height:r.height,bottom:r.bottom},formats:{bold:document.queryCommandState("bold"),italic:document.queryCommandState("italic"),underline:document.queryCommandState("underline")}},"*");});window.addEventListener("message",function(e){var d=e.data;if(!d||!d.type)return;if(d.type==="RTE_EXEC"){document.execCommand(d.cmd,false,d.val!==undefined?d.val:null);notifyChange();}if(d.type==="RTE_FONT_SIZE"){applySize(d.val);}if(d.type==="RTE_REMOVE_FMT"){document.execCommand("removeFormat",false,null);notifyChange();}if(d.type==="RTE_COLOR"){document.execCommand("foreColor",false,d.val);notifyChange();}if(d.type==="RTE_FONT"){document.execCommand("fontName",false,d.val);notifyChange();}});function applySize(px){var s=window.getSelection();if(!s||s.isCollapsed||!s.rangeCount)return;var rng=s.getRangeAt(0);var sp=document.createElement("span");sp.style.fontSize=px+"px";try{rng.surroundContents(sp);}catch(_){var f=rng.extractContents();sp.appendChild(f);rng.insertNode(sp);}var nr=document.createRange();nr.selectNodeContents(sp);s.removeAllRanges();s.addRange(nr);notifyChange(sp);}function notifyChange(node){var s=window.getSelection(),el=node;if(!el&&s&&s.rangeCount){var a=s.getRangeAt(0).commonAncestorContainer;el=a.nodeType===3?a.parentElement:a;}if(!el)return;var f=el.closest?el.closest("[data-rte]"):null;if(f)window.parent.postMessage({type:"RTE_UPDATE",field:f.dataset.rte,html:f.innerHTML},"*");}})()' + _SE)
+    const EDIT_JS = preview ? '' : `<scr` + `ipt>(function(){
+var _saved=null;
+function _save(){var s=window.getSelection();if(s&&s.rangeCount>0){try{_saved=s.getRangeAt(0).cloneRange();}catch(e){}}}
+function _restore(){if(!_saved)return;try{var s=window.getSelection();s.removeAllRanges();s.addRange(_saved);}catch(e){}}
+try{document.execCommand('styleWithCSS',false,true);}catch(e){}
+document.querySelectorAll('[data-rte]').forEach(function(el){
+  el.contentEditable='true';el.style.outline='none';el.style.cursor='text';el.style.minHeight='1em';
+  el.addEventListener('input',function(){postUp(el);});
+  el.addEventListener('mouseup',_save);el.addEventListener('keyup',_save);
+});
+function postUp(el){window.parent.postMessage({type:'RTE_UPDATE',field:el.dataset.rte,html:el.innerHTML},'*');}
+document.addEventListener('selectionchange',function(){
+  var s=window.getSelection();
+  if(!s||s.isCollapsed||!s.rangeCount){window.parent.postMessage({type:'RTE_SEL_CLEAR'},'*');return;}
+  _save();
+  var r=s.getRangeAt(0).getBoundingClientRect();
+  if(!r||!r.width){window.parent.postMessage({type:'RTE_SEL_CLEAR'},'*');return;}
+  window.parent.postMessage({type:'RTE_SELECTION',rect:{top:r.top,left:r.left,width:r.width,height:r.height,bottom:r.bottom},formats:{bold:document.queryCommandState('bold'),italic:document.queryCommandState('italic'),underline:document.queryCommandState('underline')}},'*');
+});
+window.addEventListener('message',function(evt){
+  var d=evt.data;if(!d||!d.type)return;
+  _restore();
+  if(d.type==='RTE_EXEC'){document.execCommand(d.cmd,false,d.val!==undefined?d.val:null);_notify();}
+  else if(d.type==='RTE_FONT_SIZE'){_applySize(d.val);}
+  else if(d.type==='RTE_REMOVE_FMT'){document.execCommand('removeFormat',false,null);_notify();}
+  else if(d.type==='RTE_COLOR'){document.execCommand('foreColor',false,d.val);_notify();}
+  else if(d.type==='RTE_BG_COLOR'){document.execCommand('hiliteColor',false,d.val);_notify();}
+  else if(d.type==='RTE_FONT'){document.execCommand('fontName',false,d.val||'Arial');_notify();}
+});
+function _applySize(px){
+  var s=window.getSelection();if(!s||!s.rangeCount)return;
+  var rng=s.getRangeAt(0);var sp=document.createElement('span');sp.style.fontSize=px+'px';
+  try{rng.surroundContents(sp);}catch(_){var fc=rng.extractContents();sp.appendChild(fc);rng.insertNode(sp);}
+  var nr=document.createRange();nr.selectNodeContents(sp);s.removeAllRanges();s.addRange(nr);_notify(sp);
+}
+function _notify(node){
+  var s=window.getSelection();var el=node||null;
+  if(!el&&s&&s.rangeCount){try{var a=s.getRangeAt(0).commonAncestorContainer;el=a.nodeType===3?a.parentElement:a;}catch(e){}}
+  if(!el)return;
+  var f=el.closest?el.closest('[data-rte]'):null;
+  if(f)window.parent.postMessage({type:'RTE_UPDATE',field:f.dataset.rte,html:f.innerHTML},'*');
+}
+})()` + _SE
 
 
     const generators = {
@@ -125,6 +188,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .entry{margin-bottom:10px}.entry-header{display:flex;justify-content:space-between}
             .sub{font-style:italic;color:#555;font-size:11px;margin:2px 0}.date{font-size:11px;color:#666}
             p{margin:3px 0;font-size:11.5px}.skill-group{margin-bottom:4px}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <h1>${p.fullName || 'Your Name'}</h1>
@@ -133,6 +199,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
         ${exp.length ? `<h2>Experience</h2>${expHtml}` : ''}
         ${edu.length ? `<h2>Education</h2>${eduHtml}` : ''}
         ${skills.length ? `<h2>Skills</h2>${skillsHtml}` : ''}
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </div></body></html>`,
 
         modern: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -145,6 +212,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .entry{margin-bottom:10px}.entry-header{display:flex;justify-content:space-between;align-items:baseline}
             .sub{color:#64748b;font-size:11px;margin:2px 0}.date{font-size:11px;color:#94a3b8}
             p{margin:3px 0;font-size:12px;color:#374151}.skill-group{margin-bottom:4px;font-size:12px}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <h1>${p.fullName || 'Your Name'}</h1>
@@ -153,6 +223,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
         ${exp.length ? `<h2>Experience</h2>${expHtml}` : ''}
         ${edu.length ? `<h2>Education</h2>${eduHtml}` : ''}
         ${skills.length ? `<h2>Skills</h2>${skillsHtml}` : ''}
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </div></body></html>`,
 
         standout: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -168,6 +239,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             h2{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#1a2e4a;border-bottom:2px solid #1a2e4a;margin:16px 0 8px;padding-bottom:3px}
             .entry{margin-bottom:10px}.entry-header{display:flex;justify-content:space-between}
             .sub-e{color:#64748b;font-size:11px;margin:2px 0}.date{font-size:11px;color:#94a3b8}p{margin:3px 0;font-size:11.5px}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <div class="sidebar">
@@ -181,6 +255,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             ${exp.length ? `<h2>Experience</h2>${expHtml.replace(/class="sub"/g, 'class="sub-e"')}` : ''}
             ${edu.length ? `<h2>Education</h2>${eduHtml.replace(/class="sub"/g, 'class="sub-e"')}` : ''}
         </div>
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </div></body></html>`,
 
         professional: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -195,6 +270,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             h2{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:#4b5563;border-bottom:1.5px solid #d1d5db;margin:14px 0 8px;padding-bottom:3px}
             .entry{margin-bottom:9px}.entry-header{display:flex;justify-content:space-between}
             .sub{color:#6b7280;font-size:11px;margin:2px 0}.date{font-size:11px;color:#9ca3af}p{margin:3px 0;font-size:11.5px}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <div class="sidebar">
@@ -208,6 +286,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             ${exp.length ? `<h2>Experience</h2>${expHtml}` : ''}
             ${edu.length ? `<h2>Education</h2>${eduHtml}` : ''}
         </div>
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </div></body></html>`,
 
         executive: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -221,6 +300,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .entry{margin-bottom:10px}.entry-header{display:flex;justify-content:space-between}
             .sub{font-style:italic;color:#64748b;font-size:11px;margin:2px 0}.date{font-size:11px;color:#94a3b8}p{margin:3px 0}
             .skill-group{margin-bottom:4px}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <div class="header">
@@ -231,6 +313,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
         ${exp.length ? `<h2>Professional Experience</h2>${expHtml}` : ''}
         ${edu.length ? `<h2>Education</h2>${eduHtml}` : ''}
         ${skills.length ? `<h2>Core Competencies</h2>${skillsHtml}` : ''}
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </div></body></html>`,
 
         creative: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -245,6 +328,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             h2{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#ec4899;margin:16px 0 8px;border-bottom:1.5px solid #fce7f3;padding-bottom:3px}
             .entry{margin-bottom:10px}.entry-header{display:flex;justify-content:space-between}
             .sub{color:#9ca3af;font-size:11px;margin:2px 0}.date{font-size:11px;color:#d1d5db}p{margin:3px 0}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <div class="sidebar">
@@ -258,6 +344,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             ${exp.length ? `<h2>Experience</h2>${expHtml}` : ''}
             ${edu.length ? `<h2>Education</h2>${eduHtml}` : ''}
         </div>
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </div></body></html>`,
 
         eloquent: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -270,6 +357,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .entry{margin-bottom:10px}.entry-header{display:flex;justify-content:space-between}
             .sub{font-style:italic;color:#7c3aed;font-size:11px;margin:2px 0}.date{font-size:11px;color:#a78bfa}
             p{margin:3px 0;font-size:12px}.skill-group{margin-bottom:4px}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <h1>${p.fullName || 'Your Name'}</h1>
@@ -278,6 +368,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
         ${exp.length ? `<h2>Experience</h2>${expHtml}` : ''}
         ${edu.length ? `<h2>Education</h2>${eduHtml}` : ''}
         ${skills.length ? `<h2>Skills</h2>${skillsHtml}` : ''}
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </div></body></html>`,
 
         maverick: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -294,6 +385,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .entry{margin-bottom:10px}.entry-header{display:flex;justify-content:space-between}
             .sub{color:#6b7280;font-size:11px;margin:2px 0}.date{font-size:11px;color:#9ca3af}p{margin:3px 0}
             .tag{display:inline-block;background:#f3f4f6;border-radius:4px;padding:2px 7px;font-size:10px;margin:2px 2px 2px 0}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         <div class="header" style="margin-top:52px;">
             <h1>${p.fullName || 'Your Name'}</h1>
@@ -310,6 +404,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
                 ${skills.length ? `<h3>Skills</h3>${skillTagsHtml}` : ''}
             </div>
         </div>
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </body></html>`,
 
         trailblazer: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -325,6 +420,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .tag{display:inline-block;background:rgba(255,255,255,.15);color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;margin:2px 2px 2px 0}
             .entry{margin-bottom:9px}.entry-header{display:flex;justify-content:space-between}
             .sub{color:#6b7280;font-size:11px;margin:2px 0}.date{font-size:11px;color:#9ca3af}p{margin:3px 0}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <div class="main" style="margin-top:52px;">
@@ -339,6 +437,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             ${[p.linkedin, p.github].filter(Boolean).map(x => `<p>${x}</p>`).join('')}
             ${skills.length ? `<h3>Skills</h3>${skillTagsHtml}` : ''}
         </div>
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </body></html>`,
 
         artistic: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -351,6 +450,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .entry{margin-bottom:10px}.entry-header{display:flex;justify-content:space-between}
             .sub{color:#78716c;font-style:italic;font-size:11.5px;margin:2px 0}.date{font-size:11px;color:#a8a29e}
             p{margin:3px 0}.skill-group{margin-bottom:4px}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <h1>${p.fullName || 'Your Name'}</h1>
@@ -359,6 +461,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
         ${exp.length ? `<h2>Experience</h2>${expHtml}` : ''}
         ${edu.length ? `<h2>Education</h2>${eduHtml}` : ''}
         ${skills.length ? `<h2>Skills</h2>${skillsHtml}` : ''}
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </div></body></html>`,
 
         dynamic: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -374,6 +477,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             h2{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#1d4ed8;border-bottom:2px solid #bfdbfe;margin:16px 0 8px;padding-bottom:3px}
             .entry{margin-bottom:10px}.entry-header{display:flex;justify-content:space-between}
             .sub{color:#64748b;font-size:11px;margin:2px 0}.date{font-size:11px;color:#94a3b8}p{margin:3px 0}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <div class="sidebar">
@@ -388,6 +494,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             ${exp.length ? `<h2>Experience</h2>${expHtml}` : ''}
             ${edu.length ? `<h2>Education</h2>${eduHtml}` : ''}
         </div>
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </body></html>`,
 
         minimal: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -400,6 +507,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .entry-header{display:flex;justify-content:space-between;align-items:baseline}
             .sub{color:#64748b;font-size:11px;margin:2px 0}.date{font-size:11px;color:#6ee7b7}
             p{margin:3px 0;font-size:11.5px;color:#374151}.skill-group{margin-bottom:3px;font-size:11.5px}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <h1>${p.fullName || 'Your Name'}</h1>
@@ -408,6 +518,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
         ${exp.length ? `<h2>Experience</h2>${expHtml}` : ''}
         ${edu.length ? `<h2>Education</h2>${eduHtml}` : ''}
         ${skills.length ? `<h2>Skills</h2>${skillsHtml}` : ''}
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </div></body></html>`,
 
         lancaster: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -432,6 +543,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .skills-grid{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:6px}
             .skill-item{font-size:11px;color:#333;padding-left:10px;position:relative}
             .skill-item::before{content:'▸';position:absolute;left:0;color:#4a9c8c;font-size:9px;top:1px}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <div class="header">
@@ -445,6 +559,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
         ${exp.length ? `<h2>Work Experience</h2>${exp.map(e => `<div class="entry"><div class="entry-header"><strong>${e.position || ''}</strong><span class="date">${e.startDate || ''}${e.startDate ? ' – ' : ''}${e.current ? 'Present' : (e.endDate || '')}</span></div><div class="sub">${e.company || ''}${e.location ? ', ' + e.location : ''}</div><p style="white-space:pre-line">${toHtml(e.description)}</p></div>`).join('')}` : ''}
         ${edu.length ? `<h2>Education</h2>${edu.map(e => `<div class="entry"><div class="entry-header"><strong>${e.degree || ''}${e.field ? ' – ' + e.field : ''}</strong><span class="date">${e.startDate || ''}${e.endDate ? ' – ' + e.endDate : ''}</span></div><div class="sub">${e.institution || ''}${e.grade ? ' · ' + e.grade : ''}</div></div>`).join('')}` : ''}
         ${skills.length ? `<h2>Technical Skills</h2><div class="skills-grid">${skills.flatMap(s => s.items || []).map(sk => `<span class="skill-item">${sk}</span>`).join('')}</div>` : ''}
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </div></body></html>`,
 
         linkedinstyle: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -466,6 +581,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .entry-date{font-size:10px;color:#888;margin-bottom:3px}
             .entry-desc{font-size:11px;color:#333;margin-top:3px;line-height:1.45}
             .skill-cat{font-size:10.5px;font-weight:700;color:#333;margin:8px 0 4px;text-transform:uppercase;letter-spacing:0.5px}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <h1>${p.fullName || 'Your Name'}</h1>
@@ -483,6 +601,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
                 ${edu.length ? `<h2>Education</h2>${edu.map(e => `<div class="entry"><div class="entry-title">${e.degree || ''}${e.field ? ' – ' + e.field : ''}</div><div class="entry-sub">${e.institution || ''}</div><div class="entry-date">${e.startDate || ''}${e.endDate ? ' – ' + e.endDate : ''}</div></div>`).join('')}` : ''}
             </div>
         </div>
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </body></html>`,
 
         harris: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -514,6 +633,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .skill-line strong{color:#111;font-weight:700}
             .cert-item{font-size:11px;color:#374151;padding-left:12px;position:relative;margin-bottom:3px}
             .cert-item::before{content:'•';position:absolute;left:0;color:#0a66c2}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <div class="top-header">
@@ -526,6 +648,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
         ${exp.length ? `<h2>Work Experience</h2>${exp.map(e => `<div class="exp-entry"><div class="exp-row"><span class="exp-company">${e.company || ''}</span><span class="exp-date">${e.startDate || ''}${e.startDate ? ' – ' : ''}${e.current ? 'Present' : (e.endDate || '')}</span></div><div class="exp-title">${e.position || ''}</div>${e.location ? `<div class="exp-loc">${e.location}</div>` : ''}<div class="exp-desc" style="white-space:pre-line">${toHtml(e.description)}</div></div>`).join('')}` : ''}
         ${edu.length ? `<h2>Education</h2>${edu.map(e => `<div class="edu-entry"><div class="edu-row"><span class="edu-degree">${e.degree || ''}${e.field ? ' of ' + e.field : ''}</span><span class="edu-date">${e.startDate || ''}${e.endDate ? ' – ' + e.endDate : ''}</span></div><div class="edu-inst">${e.institution || ''}${e.grade ? ' &nbsp;·&nbsp; ' + e.grade : ''}</div></div>`).join('')}` : ''}
         ${skills.length ? `<h2>Skills</h2><div class="skills-section">${skills.map(s => `<div class="skill-line"><strong>${s.category}:</strong> ${(s.items || []).join(', ')}</div>`).join('')}</div>` : ''}
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </div></body></html>`,
 
         sherlock: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -553,6 +676,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .entry-desc{font-size:10.5px;color:#333;margin-top:3px;line-height:1.45}
             .twocols{display:flex;gap:20px}
             .half{flex:1}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <div class="sidebar">
@@ -575,6 +701,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
                 ${skills.length ? `<div class="section"><h2>Tools & Technologies</h2><div style="display:flex;flex-wrap:wrap;gap:5px">${skills.flatMap(s => s.items || []).map(sk => `<span style="background:#f3f4f6;border-radius:3px;padding:2px 8px;font-size:10px;color:#333">${sk}</span>`).join('')}</div></div>` : ''}
             </div>
         </div>
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </body></html>`,
 
         odonnell: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -609,6 +736,9 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
             .edu-degree{font-weight:700;font-size:11px;color:#111}
             .edu-date{font-size:10px;color:#777;font-style:italic}
             .edu-inst{font-size:10.5px;color:#555;margin-top:2px}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
         </style></head><body>
         ${PRINT_BAR}
         <div class="top-section">
@@ -626,6 +756,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
                 ${edu.length ? `<h2>Education</h2>${edu.map(e => `<div class="edu-entry"><div class="edu-row"><span class="edu-degree">${e.degree || ''}${e.field ? ' of ' + e.field : ''}</span><span class="edu-date">${e.startDate || ''}${e.endDate ? ' – ' + e.endDate : ''}</span></div><div class="edu-inst">${e.institution || ''}${e.grade ? ' · ' + e.grade : ''}</div></div>`).join('')}` : ''}
             </div>
         </div>
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
         </body></html>`,
         rhoda: () => `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -647,7 +778,10 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
     .sum-box{background:#f5f3ff;border-left:3px solid #6d28d9;padding:10px 12px;border-radius:0 6px 6px 0;font-size:10.5px;color:#333;line-height:1.6;}
     ${PRINT_STYLE}
     @media print{${PRINT_STYLE}.sidebar{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
-    </style></head><body>
+    .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+.cert-name{font-weight:600;color:inherit}.cert-date{color:#888;font-size:10px;font-weight:400}
+.cert-desc{font-size:10.5px;color:#555;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
+        </style></head><body>
     ${PRINT_BAR}
     <div class="sidebar">
         <div>
@@ -667,14 +801,20 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
         ${p.summary ? `<div><div class="main-sec-title">Profile</div><div class="sum-box">${formatDesc(p.summary)}</div></div>` : ''}
         ${exp.length ? `<div><div class="main-sec-title">Experience</div>${exp.map(e => `<div class="rh-entry"><div class="rh-row"><span class="rh-pos">${e.position || ''}</span><span class="rh-date">${e.startDate || ''}${e.startDate ? ' – ' : ''}${e.current ? 'Present' : (e.endDate || '')}</span></div><div class="rh-co">${e.company || ''}${e.location ? ', ' + e.location : ''}</div><div class="rh-desc">${formatDesc(e.description)}</div></div>`).join('')}</div>` : ''}
     </div>
+        ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
     </body></html>`,
 
         // ── fallback ──────────────────────────────────────────────────────────
     }
 
     const gen = generators[templateId] || generators.classic
+    // Apply user accent color: swap template's default primary with chosen color
+    let html = gen()
+    if (accentColor && tmpl.primary && accentColor.toLowerCase() !== tmpl.primary.toLowerCase()) {
+        html = html.split(tmpl.primary).join(accentColor)
+    }
     // Inject selection-toolbar bridge script into every template before </body>
-    return gen().replace('</body>', EDIT_JS + '</body>')
+    return html.replace('</body>', EDIT_JS + '</body>')
 }
 
 // ─── Pre-generated Thumbnails (sample data, no print bar) ────────────────────
