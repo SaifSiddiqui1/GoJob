@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import html2pdf from 'html2pdf.js'
 import DOMPurify from 'dompurify'
 import { TEMPLATES, TEMPLATE_PREVIEWS } from '../../utils/resumeTemplates'
+import PremiumModal from '../../components/ui/PremiumModal'
 
 // ── Scale for the large template cards ──────────────────────────────────────
 const CARD_W = 300
@@ -58,6 +59,11 @@ function TemplateLargeCard({ tmpl, selected, onClick }) {
                 <div>
                     <span className={`text-sm font-bold block ${selected ? 'text-violet-700 dark:text-violet-300' : 'text-gray-800 dark:text-white'}`}>
                         {tmpl.name}
+                        {tmpl.isPremium && (
+                            <span className="inline-flex items-center gap-0.5 ml-2 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-gradient-to-r from-amber-500 to-yellow-600 text-white rounded-md shadow-sm">
+                                Premium
+                            </span>
+                        )}
                     </span>
                     <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight block mt-0.5">{tmpl.desc}</span>
                 </div>
@@ -76,6 +82,7 @@ export default function ResumePage() {
     const navigate = useNavigate()
     const qc = useQueryClient()
     const [selectedTemplate, setSelectedTemplate] = useState('modern')
+    const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false)
     const { data, isLoading } = useQuery({ queryKey: ['resumes'], queryFn: () => resumeAPI.getAll() })
     const resumes = data?.data?.resumes || []
     const freeDownloadsLeft = Math.max(0, 20 - (user?.resumeDownloadsUsed || 0))
@@ -203,6 +210,10 @@ export default function ResumePage() {
                             tmpl={tmpl}
                             selected={selectedTemplate === tmpl.id}
                             onClick={() => {
+                                if (tmpl.isPremium && !user?.isPremium) {
+                                    setIsPremiumModalOpen(true)
+                                    return
+                                }
                                 setSelectedTemplate(tmpl.id)
                                 navigate(`/dashboard/resume/builder?template=${tmpl.id}`)
                             }}
@@ -268,6 +279,7 @@ export default function ResumePage() {
                     </div>
                 )}
             </div>
+            <PremiumModal isOpen={isPremiumModalOpen} onClose={() => setIsPremiumModalOpen(false)} />
         </div>
     )
 }

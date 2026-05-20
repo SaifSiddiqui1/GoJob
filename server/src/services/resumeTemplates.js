@@ -295,6 +295,86 @@ const generators = {
         ${skills.length ? `<h2>Skills</h2>${skillsHtml}` : ''}
         </div></body></html>`;
     },
+    rezi: (resume) => {
+        const { p, exp, edu, skills, contact } = buildBlocks(resume);
+        const rawSkills = resume.skills || [];
+        const skillsFormatted = (() => {
+            if (!rawSkills.length) return [];
+            const first = rawSkills[0];
+            if (typeof first === 'string')
+                return [{ category: 'Skills', items: rawSkills.filter(s => s && typeof s === 'string') }];
+            if (first && typeof first === 'object' && ('technical' in first || 'soft' in first || 'other' in first)) {
+                const cats = [];
+                if (first.technical && first.technical.length) cats.push({ category: 'Technical Skills', items: first.technical });
+                if (first.soft && first.soft.length)           cats.push({ category: 'Soft Skills',      items: first.soft });
+                if (first.other && first.other.length)         cats.push({ category: 'Other Skills',     items: first.other });
+                return cats;
+            }
+            return rawSkills.filter(s => s && typeof s === 'object' && s.category);
+        })();
+
+        const certs = resume.certifications || [];
+        const certHtml = certs.length
+            ? `<div class="certs-section">` + certs.map(c => `<div class="cert-entry">
+                <div class="cert-name">${c.name || ''}${c.issuer ? ' &ndash; <em>' + c.issuer + '</em>' : ''}${c.date ? ' <span class="cert-date">(${c.date})</span>' : ''}</div>
+                ${c.url ? '<div class="cert-link"><a href="' + c.url + '" style="color:inherit;text-decoration:underline;font-size:10px">' + c.url + '</a></div>' : ''}
+                ${c.description ? '<div class="cert-desc">' + c.description + '</div>' : ''}
+            </div>`).join('') + `</div>`
+            : '';
+
+        return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${PRINT_STYLE}
+        @page{margin:18mm}
+        *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;margin:0;color:#111111;background:#ffffff;max-width:850px;margin:auto;padding:30px;font-size:11px;line-height:1.5}
+        h1{font-size:26px;font-weight:700;text-align:center;margin:0 0 6px 0;color:#111111}
+        .contact-line{font-size:10.5px;color:#444444;text-align:center;margin-bottom:20px}
+        h2{font-size:12px;font-weight:700;text-transform:uppercase;color:#111111;border-bottom:1px solid #111111;padding-bottom:4px;margin:16px 0 10px 0;letter-spacing:1px}
+        .entry{margin-bottom:12px}
+        .entry-header{display:flex;justify-content:space-between;align-items:flex-start}
+        .role{font-weight:700;font-size:11px;color:#111111}
+        .company{font-size:10.5px;color:#444444;margin-top:1px}
+        .date{font-size:10px;color:#666666;text-align:right}
+        .desc{margin-top:4px;font-size:11px;color:#111111}
+        .desc ul{margin:4px 0 0 16px;padding:0;list-style-type:disc}
+        .desc li{margin-bottom:3px}
+        .desc p{margin:3px 0}
+        .skills-section{margin-top:6px}
+        .skill-entry{margin-bottom:5px;font-size:11px;color:#111111}
+        .skill-entry strong{font-weight:700}
+        .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+        .cert-name{font-weight:700;color:#111111}.cert-date{color:#666666;font-size:10px;font-weight:400}
+        .cert-desc{font-size:10.5px;color:#444444;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
+        </style></head><body>${printBar(p.fullName || 'Resume')}
+        <h1>${p.fullName || 'Your Name'}</h1>
+        <div class="contact-line">${contact}</div>
+        ${p.summary ? `<h2>Professional Summary</h2><div class="desc">${p.summary}</div>` : ''}
+        ${exp.length ? `<h2>Experience</h2>${exp.map((e, idx) => `
+            <div class="entry">
+                <div class="entry-header">
+                    <div>
+                        <div class="role">${e.position || ''}</div>
+                        <div class="company">${e.company || ''}${e.location ? ' • ' + e.location : ''}</div>
+                    </div>
+                    <div class="date">${e.startDate || ''}${e.startDate ? ' – ' : ''}${e.current ? 'Present' : (e.endDate || '')}</div>
+                </div>
+                <div class="desc">${e.description || ''}</div>
+            </div>`).join('')}` : ''}
+        ${edu.length ? `<h2>Education</h2>${edu.map(e => `
+            <div class="entry">
+                <div class="entry-header">
+                    <div>
+                        <div class="role">${e.degree || ''}${e.field ? ' in ' + e.field : ''}</div>
+                        <div class="company">${e.institution || ''}${e.grade ? ' • ' + e.grade : ''}</div>
+                    </div>
+                    <div class="date">${e.startDate || ''}${e.endDate ? ' – ' + e.endDate : ''}</div>
+                </div>
+            </div>`).join('')}` : ''}
+        ${skillsFormatted.length ? `<h2>Skills</h2><div class="skills-section">${skillsFormatted.map(s => `
+            <div class="skill-entry">
+                <strong>${s.category}:</strong> ${(s.items || []).join(', ')}
+            </div>`).join('')}</div>` : ''}
+        ${certs.length ? `<h2>Certifications &amp; Awards</h2>${certHtml}` : ''}
+        </body></html>`;
+    },
 };
 
 function generateTemplateHTML(resume, templateId = 'classic') {

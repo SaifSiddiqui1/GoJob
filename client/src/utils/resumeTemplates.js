@@ -19,7 +19,8 @@ export const TEMPLATES = [
     { id: 'harris', name: 'Harris', desc: 'Bold dates, clean professional', primary: '#1a1a2e', bg: '#fff', accent: '#333', layout: 'single' },
     { id: 'sherlock', name: 'Sherlock', desc: 'Dark sidebar with photo slot', primary: '#2d2d2d', bg: '#fff', accent: '#fff', layout: 'sidebar-photo' },
     { id: 'odonnell', name: "O'Donnell", desc: 'Creative headline + two-col skills', primary: '#222', bg: '#fff', accent: '#1a1a1a', layout: 'two-col' },
-    { id: 'rhoda', name: 'Rhoda Designer', desc: 'Sidebar designer resume', primary: '#1a1a1a', bg: '#fff', accent: '#111', layout: 'sidebar-left' }
+    { id: 'rhoda', name: 'Rhoda Designer', desc: 'Sidebar designer resume', primary: '#1a1a1a', bg: '#fff', accent: '#111', layout: 'sidebar-left' },
+    { id: 'rezi', name: 'Rezi ATS', desc: 'Grayscale single-column ATS-optimized template', primary: '#111111', bg: '#ffffff', accent: '#111111', layout: 'single', isPremium: true }
 ]
 
 // ─── Sample Data for Thumbnails ─────────────────────────────────────────────
@@ -804,6 +805,61 @@ function _notify(node){
         ${certs.length ? `<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid currentColor;padding-bottom:2px">Certifications &amp; Awards</h2>${certHtml}` : ''}
     </body></html>`,
 
+        rezi: () => `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+            ${PRINT_STYLE}
+            @page{margin:18mm}
+            *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;margin:0;color:#111111;background:#ffffff;max-width:850px;margin:auto;padding:30px;font-size:11px;line-height:1.5}
+            h1{font-size:26px;font-weight:700;text-align:center;margin:0 0 6px 0;color:#111111}
+            .contact-line{font-size:10.5px;color:#444444;text-align:center;margin-bottom:20px}
+            h2{font-size:12px;font-weight:700;text-transform:uppercase;color:#111111;border-bottom:1px solid #111111;padding-bottom:4px;margin:16px 0 10px 0;letter-spacing:1px}
+            .entry{margin-bottom:12px}
+            .entry-header{display:flex;justify-content:space-between;align-items:flex-start}
+            .role{font-weight:700;font-size:11px;color:#111111}
+            .company{font-size:10.5px;color:#444444;margin-top:1px}
+            .date{font-size:10px;color:#666666;text-align:right}
+            .desc{margin-top:4px;font-size:11px;color:#111111}
+            .desc ul{margin:4px 0 0 16px;padding:0;list-style-type:disc}
+            .desc li{margin-bottom:3px}
+            .desc p{margin:3px 0}
+            .skills-section{margin-top:6px}
+            .skill-entry{margin-bottom:5px;font-size:11px;color:#111111}
+            .skill-entry strong{font-weight:700}
+            .certs-section{margin-top:4px}.cert-entry{margin-bottom:6px;font-size:11px;line-height:1.45}
+            .cert-name{font-weight:700;color:#111111}.cert-date{color:#666666;font-size:10px;font-weight:400}
+            .cert-desc{font-size:10.5px;color:#444444;font-style:italic;margin-top:1px}.cert-link{font-size:9.5px;margin-top:1px}
+        </style></head><body>
+        ${PRINT_BAR}
+        <h1>${p.fullName || 'Your Name'}</h1>
+        <div class="contact-line">${contact}</div>
+        ${p.summary ? `<h2>Professional Summary</h2>${summaryBlock('desc')}` : ''}
+        ${exp.length ? `<h2>Experience</h2>${exp.map((e, idx) => `
+            <div class="entry">
+                <div class="entry-header">
+                    <div>
+                        <div class="role">${e.position || ''}</div>
+                        <div class="company">${e.company || ''}${e.location ? ' • ' + e.location : ''}</div>
+                    </div>
+                    <div class="date">${e.startDate || ''}${e.startDate ? ' – ' : ''}${e.current ? 'Present' : (e.endDate || '')}</div>
+                </div>
+                <div class="desc" data-rte="exp-${idx}-description">${formatDesc(e.description)}</div>
+            </div>`).join('')}` : ''}
+        ${edu.length ? `<h2>Education</h2>${edu.map(e => `
+            <div class="entry">
+                <div class="entry-header">
+                    <div>
+                        <div class="role">${e.degree || ''}${e.field ? ' in ' + e.field : ''}</div>
+                        <div class="company">${e.institution || ''}${e.grade ? ' • ' + e.grade : ''}</div>
+                    </div>
+                    <div class="date">${e.startDate || ''}${e.endDate ? ' – ' + e.endDate : ''}</div>
+                </div>
+            </div>`).join('')}` : ''}
+        ${skills.length ? `<h2>Skills</h2><div class="skills-section">${skills.map(s => `
+            <div class="skill-entry">
+                <strong>${s.category}:</strong> ${(s.items || []).join(', ')}
+            </div>`).join('')}</div>` : ''}
+        ${certs.length ? `<h2>Certifications &amp; Awards</h2>${certHtml}` : ''}
+        </body></html>`,
+
         // ── fallback ──────────────────────────────────────────────────────────
     }
 
@@ -819,6 +875,6 @@ function _notify(node){
 
 // ─── Pre-generated Thumbnails (sample data, no print bar) ────────────────────
 export const TEMPLATE_PREVIEWS = Object.fromEntries(
-    ['classic', 'modern', 'executive', 'standout', 'professional', 'creative', 'eloquent', 'trailblazer', 'maverick', 'artistic', 'dynamic', 'minimal', 'lancaster', 'linkedinstyle', 'harris', 'sherlock', 'odonnell', 'rhoda']
+    ['classic', 'modern', 'executive', 'standout', 'professional', 'creative', 'eloquent', 'trailblazer', 'maverick', 'artistic', 'dynamic', 'minimal', 'lancaster', 'linkedinstyle', 'harris', 'sherlock', 'odonnell', 'rhoda', 'rezi']
         .map(id => [id, generateTemplateHTML(SAMPLE_RESUME, id, { preview: true })])
 )

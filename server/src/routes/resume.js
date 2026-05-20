@@ -27,10 +27,14 @@ router.get('/:id', protect, async (req, res, next) => {
 // Create new resume
 router.post('/', protect, async (req, res, next) => {
     try {
+        if (req.body.templateId === 'rezi' && !req.user.isPremiumActive()) {
+            return res.status(403).json({ success: false, message: 'The Rezi ATS template is only available to Premium users.' });
+        }
+
         const allowedFields = ['title', 'template', 'templateId', 'themeColor', 'fontStyle', 'personalInfo', 'summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'customSections'];
         const resumeData = {};
         allowedFields.forEach(f => { if (req.body[f] !== undefined) resumeData[f] = req.body[f]; });
-        
+
         const resume = await Resume.create({ user: req.user._id, ...resumeData });
         res.status(201).json({ success: true, data: { resume } });
     } catch (err) { next(err); }
@@ -39,10 +43,14 @@ router.post('/', protect, async (req, res, next) => {
 // Update resume
 router.put('/:id', protect, async (req, res, next) => {
     try {
+        if (req.body.templateId === 'rezi' && !req.user.isPremiumActive()) {
+            return res.status(403).json({ success: false, message: 'The Rezi ATS template is only available to Premium users.' });
+        }
+
         const allowedFields = ['title', 'template', 'templateId', 'themeColor', 'fontStyle', 'personalInfo', 'summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'customSections'];
         const updates = {};
         allowedFields.forEach(f => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
-        
+
         const resume = await Resume.findOneAndUpdate(
             { _id: req.params.id, user: req.user._id },
             { ...updates, $inc: { version: 0 } },
@@ -111,12 +119,18 @@ router.get('/:id/download', protect, async (req, res, next) => {
             });
         }
 
-        const resume = await Resume.findOneAndUpdate(
-            { _id: req.params.id, user: req.user._id },
-            { $inc: { downloadCount: 1 } },
-            { new: true }
-        );
+        const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
         if (!resume) return res.status(404).json({ success: false, message: 'Resume not found.' });
+
+        if (resume.templateId === 'rezi' && !user.isPremiumActive()) {
+            return res.status(403).json({
+                success: false,
+                message: 'The Rezi ATS template is only available to Premium users.',
+                upgradeRequired: true,
+            });
+        }
+
+        await Resume.findByIdAndUpdate(resume._id, { $inc: { downloadCount: 1 } });
 
         if (!user.isPremiumActive()) {
             await user.constructor.findByIdAndUpdate(user._id, { $inc: { resumeDownloadsUsed: 1 } });

@@ -12,6 +12,7 @@ import { resumeAPI, aiAPI } from '../../services/api'
 import toast from 'react-hot-toast'
 import { generateTemplateHTML } from '../../utils/resumeTemplates'
 import RichTextEditor from '../../components/ui/RichTextEditor'
+import useAuthStore from '../../store/authStore'
 
 // ── Month / Year Picker ───────────────────────────────────────────────────────
 const MONTHS = [
@@ -338,6 +339,7 @@ export default function ResumeBuilderPage() {
     const [searchParams]    = useSearchParams()
     const isUploadMode      = searchParams.get('mode') === 'upload'
     const qc                = useQueryClient()
+    const { user }          = useAuthStore()
 
     const [open, setOpen] = useState({
         personal: true, experience: false, education: false,
@@ -371,6 +373,17 @@ export default function ResumeBuilderPage() {
         enabled: !!id,
         onSuccess: (res) => setResume(res.data.resume),
     })
+
+    useEffect(() => {
+        if (resume.templateId === 'rezi' && !user?.isPremium) {
+            toast.error('The Rezi ATS template is only available to Premium users.')
+            if (id) {
+                navigate('/dashboard/resume')
+            } else {
+                setResume(p => ({ ...p, templateId: 'modern' }))
+            }
+        }
+    }, [resume.templateId, user?.isPremium, id, navigate])
 
     const saveMutation = useMutation({
         mutationFn: (data) => {
