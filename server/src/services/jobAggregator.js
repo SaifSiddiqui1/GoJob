@@ -129,68 +129,8 @@ const mapJSearchJobType = (type = '') => {
  * Fetch jobs from Adzuna API (free, needs app_id + api_key)
  */
 const fetchFromAdzuna = async () => {
-    if (!process.env.ADZUNA_APP_ID || !process.env.ADZUNA_API_KEY) {
-        console.log('⚠️  Adzuna: ADZUNA_APP_ID or ADZUNA_API_KEY missing, skipping.');
-        return [];
-    }
-    const categories = [
-        { query: 'software developer', category: 'sde' },
-        { query: 'data analyst', category: 'sde' },
-        { query: 'marketing manager', category: 'marketing' },
-        { query: 'sales executive', category: 'sales' },
-        { query: 'customer support', category: 'customer_support' },
-        { query: 'product manager', category: 'it' },
-    ];
-    // Try gb (most reliable), fallback to us
-    const countries = ['gb', 'us'];
-    const jobs = [];
-
-    for (const country of countries) {
-        try {
-            for (const cat of categories) {
-                const res = await axios.get(
-                    `https://api.adzuna.com/v1/api/jobs/${country}/search/1`,
-                    {
-                        headers: { Accept: 'application/json' },
-                        params: {
-                            app_id: process.env.ADZUNA_APP_ID,
-                            app_key: process.env.ADZUNA_API_KEY,
-                            results_per_page: 15,
-                            what: cat.query,
-                        },
-                        timeout: 12000,
-                    }
-                );
-                const mapped = (res.data?.results || []).map(j => ({
-                    title: j.title,
-                    company: j.company?.display_name || 'Unknown',
-                    location: j.location?.display_name || country.toUpperCase(),
-                    description: j.description || j.title,
-                    applyLink: j.redirect_url,
-                    sourceJobId: `adzuna-${country}-${j.id}`,
-                    source: 'adzuna',
-                    sourceUrl: j.redirect_url,
-                    category: cat.category,
-                    jobType: 'full-time',
-                    remote: 'on-site',
-                    postedDate: j.created ? new Date(j.created) : new Date(),
-                    salary: {
-                        min: j.salary_min,
-                        max: j.salary_max,
-                        currency: country === 'gb' ? 'GBP' : 'USD',
-                        isDisclosed: !!(j.salary_min || j.salary_max),
-                    },
-                    status: 'pending',
-                }));
-                jobs.push(...mapped);
-            }
-            console.log(`✅ Adzuna (${country}): ${jobs.length} jobs fetched`);
-            break; // success — no need to try next country
-        } catch (err) {
-            console.error(`Adzuna (${country}) error: ${err.response?.status || err.message}`);
-        }
-    }
-    return jobs;
+    console.log('⏸️ Adzuna API is paused by admin request.');
+    return [];
 };
 
 /**
@@ -570,25 +510,417 @@ const fetchFromLinkedInJobs2 = async () => {
     }
 };
 
+// ─── 9 New RapidAPI Scrapers ──────────────────────────────────────────────────
+
+// 1. JobFinder API
+const fetchFromJobFinder = async () => {
+    if (skipIfNoKey('JobFinder')) return [];
+    try {
+        const res = await axios.get('https://jobfinder-api1.p.rapidapi.com/search', {
+            headers: rapidHeaders('jobfinder-api1.p.rapidapi.com'),
+            params: { query: 'software developer', location: 'remote', limit: 20 },
+            timeout: 15000,
+        });
+        const raw = res.data?.jobs || res.data?.data || res.data;
+        const list = Array.isArray(raw) ? raw : [];
+        const mapped = list.map(j => ({
+            title: j.title || j.job_title || 'Unknown Role',
+            company: j.company || j.company_name || 'Unknown Company',
+            companyLogo: j.company_logo || j.logo,
+            location: j.location || 'Remote',
+            remote: 'remote',
+            description: j.description || j.snippet || 'No description provided.',
+            applyLink: j.apply_link || j.url || j.applyLink || j.link,
+            sourceJobId: `jobfinder-${j.id || j.job_id || Math.random()}`,
+            source: 'jobfinder-api1',
+            sourceUrl: j.url || j.link,
+            category: mapTitleToCategory(j.title),
+            jobType: mapJobType(j.job_type || j.employment_type),
+            postedDate: j.posted_at || j.date_posted ? new Date(j.posted_at || j.date_posted) : new Date(),
+            skills: j.skills || [],
+            salary: { isDisclosed: false },
+            status: 'pending',
+        }));
+        console.log(`✅ JobFinder API: ${mapped.length} jobs`);
+        return mapped;
+    } catch (err) {
+        console.error('JobFinder API error:', err.response?.status || err.message);
+        return [];
+    }
+};
+
+// 2. Hacker News Who Is Hiring
+const fetchFromHackerNews = async () => {
+    if (skipIfNoKey('Hacker News Who Is Hiring')) return [];
+    try {
+        const monthsRes = await axios.get('https://hacker-news-who-is-hiring-api.p.rapidapi.com/months', {
+            headers: rapidHeaders('hacker-news-who-is-hiring-api.p.rapidapi.com'),
+            timeout: 10000,
+        });
+        const monthsRaw = monthsRes.data;
+        const months = Array.isArray(monthsRaw) ? monthsRaw : [];
+        if (months.length === 0) return [];
+        
+        // months can be array of strings (e.g. ["2025-04"]) or objects with .id
+        const firstMonth = months[0];
+        const latestMonth = (typeof firstMonth === 'object' && firstMonth !== null)
+            ? (firstMonth.id || firstMonth.month || firstMonth.slug || String(firstMonth))
+            : String(firstMonth);
+        const jobsRes = await axios.get(`https://hacker-news-who-is-hiring-api.p.rapidapi.com/jobs`, {
+            headers: rapidHeaders('hacker-news-who-is-hiring-api.p.rapidapi.com'),
+            params: { month: latestMonth, limit: 30 },
+            timeout: 15000,
+        });
+        const rawList = jobsRes.data?.jobs || jobsRes.data?.data || jobsRes.data;
+        const list = Array.isArray(rawList) ? rawList : [];
+        const mapped = list.map(j => ({
+            title: j.title || j.role || 'Software Engineer',
+            company: j.company || 'HN Poster',
+            companyLogo: null,
+            location: j.location || 'Remote',
+            remote: 'remote',
+            description: j.text || j.description || 'Hacker News Thread Job Posting',
+            applyLink: j.url || j.applyLink || `https://news.ycombinator.com/item?id=${j.id}`,
+            sourceJobId: `hn-hiring-${j.id || Math.random()}`,
+            source: 'hacker-news-who-is-hiring',
+            sourceUrl: j.url || `https://news.ycombinator.com/item?id=${j.id}`,
+            category: 'sde',
+            jobType: 'full-time',
+            postedDate: j.date || j.time ? new Date(j.date || j.time * 1000) : new Date(),
+            skills: j.skills || [],
+            salary: { isDisclosed: false },
+            status: 'pending',
+        }));
+        console.log(`✅ Hacker News: ${mapped.length} jobs`);
+        return mapped;
+    } catch (err) {
+        console.error('Hacker News API error:', err.response?.status || err.message);
+        return [];
+    }
+};
+
+// 3. Upwork Jobs
+const fetchFromUpwork = async () => {
+    if (skipIfNoKey('Upwork Jobs')) return [];
+    try {
+        const res = await axios.get('https://upwork-jobs-api3.p.rapidapi.com/upwork', {
+            headers: rapidHeaders('upwork-jobs-api3.p.rapidapi.com'),
+            params: {
+                q: 'JavaScript|React|Node',
+                limit: 20
+            },
+            timeout: 15000,
+        });
+        const list = res.data?.jobs || res.data?.data || res.data || [];
+        const mapped = list.map(j => ({
+            title: j.title || 'Freelance Developer',
+            company: j.company || 'Upwork Client',
+            location: j.location || 'Remote',
+            remote: 'remote',
+            description: j.description || j.snippet || 'No description provided.',
+            applyLink: j.url || j.link || j.applyLink,
+            sourceJobId: `upwork-${j.id || j.job_id || Math.random()}`,
+            source: 'upwork-jobs-api3',
+            sourceUrl: j.url || j.link,
+            category: 'sde',
+            jobType: 'contract',
+            postedDate: j.posted_at || j.published_at ? new Date(j.posted_at || j.published_at) : new Date(),
+            skills: j.skills || [],
+            salary: {
+                min: j.hourly_min_usd || j.budget,
+                max: j.hourly_max_usd || j.budget,
+                currency: 'USD',
+                isDisclosed: !!(j.hourly_min_usd || j.hourly_max_usd || j.budget)
+            },
+            status: 'pending',
+        }));
+        console.log(`✅ Upwork Jobs: ${mapped.length} jobs`);
+        return mapped;
+    } catch (err) {
+        console.error('Upwork Jobs API error:', err.response?.status || err.message);
+        return [];
+    }
+};
+
+// 4. LinkedIn Jobs 12
+const fetchFromLinkedInJobs12 = async () => {
+    if (skipIfNoKey('LinkedIn Jobs 12')) return [];
+    try {
+        const res = await axios.get('https://linkedin-jobs12.p.rapidapi.com/jobs/search', {
+            headers: rapidHeaders('linkedin-jobs12.p.rapidapi.com'),
+            params: { limit: 20, hybrid: false, remote: true, post_since: 7 },
+            timeout: 15000,
+        });
+        const list = res.data?.jobs || res.data?.data || res.data || [];
+        const mapped = list.map(j => ({
+            title: j.title || j.job_title || 'Unknown LinkedIn Role',
+            company: j.company || j.company_name || 'Unknown Company',
+            companyLogo: j.company_logo || j.logo,
+            location: j.location || 'Remote',
+            remote: 'remote',
+            description: j.description || j.snippet || 'No description provided.',
+            applyLink: j.url || j.job_url || j.apply_link,
+            sourceJobId: `li12-${j.id || j.job_id || Math.random()}`,
+            source: 'linkedin-jobs12',
+            sourceUrl: j.url || j.job_url,
+            category: mapTitleToCategory(j.title),
+            jobType: mapJobType(j.job_type || j.employment_type),
+            postedDate: j.posted_at || j.date_posted ? new Date(j.posted_at || j.date_posted) : new Date(),
+            skills: j.skills || [],
+            salary: { isDisclosed: false },
+            status: 'pending',
+        }));
+        console.log(`✅ LinkedIn Jobs 12: ${mapped.length} jobs`);
+        return mapped;
+    } catch (err) {
+        console.error('LinkedIn Jobs 12 API error:', err.response?.status || err.message);
+        return [];
+    }
+};
+
+// 5. Google Jobs Scraper
+const fetchFromGoogleJobs = async () => {
+    if (skipIfNoKey('Google Jobs')) return [];
+    try {
+        const res = await axios.get('https://google-jobs-scraper4.p.rapidapi.com/api/google/jobs', {
+            headers: rapidHeaders('google-jobs-scraper4.p.rapidapi.com'),
+            params: { q: 'software engineer', hl: 'en', gl: 'us', google_domain: 'google.com' },
+            timeout: 15000,
+        });
+        const list = res.data?.jobs || res.data?.data || res.data || [];
+        const mapped = list.map(j => ({
+            title: j.title || 'Google Job Listing',
+            company: j.company || 'Unknown Employer',
+            companyLogo: j.thumbnail || j.companyLogo,
+            location: j.location || 'Remote',
+            remote: (j.location || '').toLowerCase().includes('remote') ? 'remote' : 'on-site',
+            description: j.description || 'Google Jobs Search Result',
+            applyLink: j.apply_link || j.link || j.url,
+            sourceJobId: `googlejobs-${j.id || j.job_id || Math.random()}`,
+            source: 'google-jobs-scraper4',
+            sourceUrl: j.apply_link || j.link,
+            category: 'sde',
+            jobType: 'full-time',
+            postedDate: j.posted_at || j.date_posted ? new Date(j.posted_at || j.date_posted) : new Date(),
+            skills: j.skills || [],
+            salary: { isDisclosed: false },
+            status: 'pending',
+        }));
+        console.log(`✅ Google Jobs: ${mapped.length} jobs`);
+        return mapped;
+    } catch (err) {
+        console.error('Google Jobs Scraper error:', err.response?.status || err.message);
+        return [];
+    }
+};
+
+// 6. LinkedIn Job Search API 2 (POST)
+const fetchFromLinkedInJobSearchApi2 = async () => {
+    if (skipIfNoKey('LinkedIn Job Search API 2')) return [];
+    try {
+        const res = await axios.post('https://linkedin-job-search-api2.p.rapidapi.com/getjobs', {
+            search_term: 'software',
+            location: 'remote',
+            results_wanted: 20,
+            site_name: ['linkedin'],
+            is_remote: true,
+            linkedin_fetch_description: true,
+            hours_old: 168
+        }, {
+            headers: rapidHeaders('linkedin-job-search-api2.p.rapidapi.com'),
+            timeout: 25000,
+        });
+        const list = res.data?.jobs || res.data?.data || res.data || [];
+        const mapped = list.map(j => ({
+            title: j.title || 'LinkedIn Job',
+            company: j.company || 'Unknown',
+            companyLogo: j.company_logo || j.logo,
+            location: j.location || 'Remote',
+            remote: 'remote',
+            description: j.description || j.snippet || 'LinkedIn Job Posting',
+            applyLink: j.url || j.job_url || j.apply_link,
+            sourceJobId: `liapi2-${j.id || j.job_id || Math.random()}`,
+            source: 'linkedin-job-search-api2',
+            sourceUrl: j.url || j.job_url,
+            category: mapTitleToCategory(j.title),
+            jobType: mapJobType(j.job_type),
+            postedDate: j.posted_at || j.date_posted ? new Date(j.posted_at || j.date_posted) : new Date(),
+            skills: j.skills || [],
+            salary: { isDisclosed: false },
+            status: 'pending',
+        }));
+        console.log(`✅ LinkedIn Job Search 2: ${mapped.length} jobs`);
+        return mapped;
+    } catch (err) {
+        console.error('LinkedIn Job Search API 2 error:', err.response?.status || err.message);
+        return [];
+    }
+};
+
+// 7. LinkedIn Job Search Real-Time
+const fetchFromLinkedInRealTime = async () => {
+    if (skipIfNoKey('LinkedIn Real-Time Job Search')) return [];
+    try {
+        const res = await axios.get('https://linkedin-job-search-real-time.p.rapidapi.com/lastMonth', {
+            headers: rapidHeaders('linkedin-job-search-real-time.p.rapidapi.com'),
+            timeout: 15000,
+        });
+        const list = res.data?.jobs || res.data?.data || res.data || [];
+        const mapped = list.map(j => ({
+            title: j.title || 'LinkedIn Real-Time Job',
+            company: j.company || 'Unknown',
+            companyLogo: j.company_logo,
+            location: j.location || 'Remote',
+            remote: 'remote',
+            description: j.description || 'LinkedIn Real-Time Search Result',
+            applyLink: j.url || j.job_url,
+            sourceJobId: `lirealtime-${j.id || j.job_id || Math.random()}`,
+            source: 'linkedin-job-search-real-time',
+            sourceUrl: j.url || j.job_url,
+            category: mapTitleToCategory(j.title),
+            jobType: 'full-time',
+            postedDate: j.posted_at || j.date_posted ? new Date(j.posted_at || j.date_posted) : new Date(),
+            skills: j.skills || [],
+            salary: { isDisclosed: false },
+            status: 'pending',
+        }));
+        console.log(`✅ LinkedIn Real-Time: ${mapped.length} jobs`);
+        return mapped;
+    } catch (err) {
+        console.error('LinkedIn Real-Time Job Search error:', err.response?.status || err.message);
+        return [];
+    }
+};
+
+// 8. LinkedIn Jobs by DataNest
+const fetchFromLinkedInJobsDataNest = async () => {
+    if (skipIfNoKey('LinkedIn Jobs by DataNest')) return [];
+    try {
+        const res = await axios.get('https://linkedin-jobs-by-datanest.p.rapidapi.com/salary-insights', {
+            headers: rapidHeaders('linkedin-jobs-by-datanest.p.rapidapi.com'),
+            timeout: 15000,
+        });
+        const list = res.data?.jobs || res.data?.data || res.data || [];
+        const mapped = list.map(j => ({
+            title: j.title || 'DataNest Job',
+            company: j.company || 'Unknown Company',
+            companyLogo: j.company_logo,
+            location: j.location || 'Remote',
+            remote: 'remote',
+            description: j.description || 'Salary insights linked job',
+            applyLink: j.url || j.job_url || j.link,
+            sourceJobId: `datanest-${j.id || j.job_id || Math.random()}`,
+            source: 'linkedin-jobs-by-datanest',
+            sourceUrl: j.url || j.job_url || j.link,
+            category: mapTitleToCategory(j.title),
+            jobType: 'full-time',
+            postedDate: j.posted_at || j.date_posted ? new Date(j.posted_at || j.date_posted) : new Date(),
+            skills: j.skills || [],
+            salary: {
+                min: j.min_salary,
+                max: j.max_salary,
+                currency: j.currency || 'USD',
+                isDisclosed: !!(j.min_salary || j.max_salary)
+            },
+            status: 'pending',
+        }));
+        console.log(`✅ LinkedIn DataNest: ${mapped.length} jobs`);
+        return mapped;
+    } catch (err) {
+        console.error('LinkedIn Jobs by DataNest error:', err.response?.status || err.message);
+        return [];
+    }
+};
+
+// 9. ATS Jobs DB
+const fetchFromAtsJobsDb = async () => {
+    if (skipIfNoKey('ATS Jobs DB')) return [];
+    try {
+        const res = await axios.get('https://ats-jobs-db.p.rapidapi.com/api/jobs/expired', {
+            headers: rapidHeaders('ats-jobs-db.p.rapidapi.com'),
+            params: { batch_size: 20 },
+            timeout: 15000,
+        });
+        const rawData = res.data?.jobs || res.data?.data || res.data;
+        const list = Array.isArray(rawData) ? rawData : [];
+        const mapped = list.map(j => ({
+            title: j.title || 'ATS Job',
+            company: j.company || 'ATS Employer',
+            companyLogo: j.company_logo,
+            location: j.location || 'Remote',
+            remote: 'remote',
+            description: j.description || 'ATS Jobs DB Listing',
+            applyLink: j.url || j.link || j.apply_url,
+            sourceJobId: `atsjobs-${j.id || j.job_id || Math.random()}`,
+            source: 'ats-jobs-db',
+            sourceUrl: j.url || j.link,
+            category: mapTitleToCategory(j.title),
+            jobType: 'full-time',
+            postedDate: j.posted_at || j.date_posted ? new Date(j.posted_at || j.date_posted) : new Date(),
+            skills: j.skills || [],
+            salary: { isDisclosed: false },
+            status: 'pending',
+        }));
+        console.log(`✅ ATS Jobs DB: ${mapped.length} jobs`);
+        return mapped;
+    } catch (err) {
+        console.error('ATS Jobs DB error:', err.response?.status || err.message);
+        return [];
+    }
+};
+
 /**
- * Main aggregator: run all sources and save new jobs to DB
+ * Main aggregator: run all sources or selected source and save new jobs to DB
  */
-const aggregateJobs = async () => {
-    console.log('🔍 Starting job aggregation from all sources...');
-    const results = await Promise.allSettled([
-        fetchFromAdzuna(),
-        fetchFromRemotive(),
-        fetchFromRemoteOK(),
-        fetchFromArbeitnow(),
-        fetchFromJSearch(),
-        fetchFromIndeed46(),
-        fetchFromLinkedInSearch(),
-        fetchFromActiveJobsDB(),
-        fetchFromJobPostingFeed(),
-        fetchFromInternshipsAPI(),
-        fetchFromIndeedScraper(),
-        fetchFromLinkedInJobs2(),
-    ]);
+const aggregateJobs = async (selectedSource) => {
+    console.log(`🔍 Starting job aggregation. Selected source: ${selectedSource || 'all'}`);
+    
+    // Map of source name to fetcher function
+    const scrapers = {
+        'adzuna': fetchFromAdzuna,
+        'remotive': fetchFromRemotive,
+        'remoteok': fetchFromRemoteOK,
+        'arbeitnow': fetchFromArbeitnow,
+        'jsearch': fetchFromJSearch,
+        'indeed46': fetchFromIndeed46,
+        'linkedin-search': fetchFromLinkedInSearch,
+        'active-jobs-db': fetchFromActiveJobsDB,
+        'job-posting-feed': fetchFromJobPostingFeed,
+        'internships-api': fetchFromInternshipsAPI,
+        'indeed-scraper': fetchFromIndeedScraper,
+        'linkedin-jobs2': fetchFromLinkedInJobs2,
+        
+        // New RapidAPI sources
+        'jobfinder-api1': fetchFromJobFinder,
+        'hacker-news-who-is-hiring': fetchFromHackerNews,
+        'upwork-jobs-api3': fetchFromUpwork,
+        'linkedin-jobs12': fetchFromLinkedInJobs12,
+        'google-jobs-scraper4': fetchFromGoogleJobs,
+        'linkedin-job-search-api2': fetchFromLinkedInJobSearchApi2,
+        'linkedin-job-search-real-time': fetchFromLinkedInRealTime,
+        'linkedin-jobs-by-datanest': fetchFromLinkedInJobsDataNest,
+        'ats-jobs-db': fetchFromAtsJobsDb,
+    };
+
+    let functionsToRun = [];
+    if (selectedSource && selectedSource !== 'all') {
+        const scraper = scrapers[selectedSource];
+        if (scraper) {
+            functionsToRun.push({ name: selectedSource, fn: scraper });
+        } else {
+            console.warn(`⚠️ Unknown source selected: ${selectedSource}`);
+        }
+    } else {
+        // Run all
+        functionsToRun = Object.entries(scrapers).map(([name, fn]) => ({ name, fn }));
+    }
+
+    const results = await Promise.allSettled(
+        functionsToRun.map(item => item.fn().catch(err => {
+            console.error(`Error executing scraper ${item.name}:`, err);
+            return [];
+        }))
+    );
 
     const allJobs = results.flatMap(r => r.value || []);
 

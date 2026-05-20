@@ -35,7 +35,7 @@ const jobSchema = new mongoose.Schema({
     applyEmail: { type: String },
 
     // Source tracking (which API/platform this came from)
-    source: { type: String, enum: ['adzuna', 'remotive', 'remoteok', 'arbeitnow', 'manual', 'other', 'n8n', 'telegram', 'employer'], default: 'manual' },
+    source: { type: String, default: 'manual' },
     sourceJobId: { type: String }, // original ID from source API
     sourceUrl: { type: String },
 

@@ -127,7 +127,8 @@ export const adminAPI = {
     rejectJob: (id, reason) => api.put(`/admin/jobs/${id}/reject`, { reason }),
     createJob: (data) => api.post('/admin/jobs', data),
     deleteJob: (id) => api.delete(`/admin/jobs/${id}`),
-    fetchJobs: () => api.post('/admin/jobs/fetch'),
+    fetchJobs: (source) => api.post('/admin/jobs/fetch', { source }),
+    deleteOldJobs: (params) => api.post('/admin/jobs/delete-old', params),
     uploadStudy: (formData) => api.post('/admin/study', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
     deleteStudy: (id) => api.delete(`/admin/study/${id}`),
 }

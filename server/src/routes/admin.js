@@ -260,11 +260,59 @@ router.delete('/jobs/:id', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
-// Manually trigger full job aggregation (all sources incl. JSearch)
+// Manually trigger job aggregation (supports all or specific source)
 router.post('/jobs/fetch', async (req, res, next) => {
     try {
-        const result = await aggregateJobs();
+        const { source } = req.body;
+        const result = await aggregateJobs(source);
         res.json({ success: true, message: 'Job fetching complete.', data: result });
+    } catch (err) { next(err); }
+});
+
+// Bulk delete old jobs or delete all jobs in a single click
+// POST /api/admin/jobs/delete-old
+// Body: { date, relative, all }
+router.post('/jobs/delete-old', async (req, res, next) => {
+    try {
+        const { date, relative, all } = req.body;
+        
+        if (all) {
+            const result = await Job.deleteMany({});
+            return res.json({
+                success: true,
+                message: `Successfully deleted all ${result.deletedCount} jobs from the database.`,
+                data: { deletedCount: result.deletedCount }
+            });
+        }
+
+        let beforeDate;
+        if (relative) {
+            const now = new Date();
+            if (relative === '2days') {
+                beforeDate = new Date(now.setDate(now.getDate() - 2));
+            } else if (relative === '1week') {
+                beforeDate = new Date(now.setDate(now.getDate() - 7));
+            } else if (relative === '1month') {
+                beforeDate = new Date(now.setMonth(now.getMonth() - 1));
+            } else {
+                return res.status(400).json({ success: false, message: 'Invalid relative date option.' });
+            }
+        } else if (date) {
+            beforeDate = new Date(date);
+        } else {
+            return res.status(400).json({ success: false, message: 'Either date, relative date, or all option must be provided.' });
+        }
+
+        if (isNaN(beforeDate.getTime())) {
+            return res.status(400).json({ success: false, message: 'Invalid date provided.' });
+        }
+
+        const result = await Job.deleteMany({ postedDate: { $lt: beforeDate } });
+        res.json({
+            success: true,
+            message: `Successfully deleted ${result.deletedCount} jobs older than ${beforeDate.toDateString()}`,
+            data: { deletedCount: result.deletedCount, date: beforeDate }
+        });
     } catch (err) { next(err); }
 });
 

@@ -7,10 +7,37 @@ import toast from 'react-hot-toast'
 
 const STATUS_TABS = ['pending', 'approved', 'rejected', 'all']
 
+const JOB_SOURCES = [
+    { id: 'all', name: 'All Configured Sources' },
+    { id: 'jsearch', name: 'JSearch (RapidAPI)' },
+    { id: 'remotive', name: 'Remotive' },
+    { id: 'remoteok', name: 'RemoteOK' },
+    { id: 'arbeitnow', name: 'Arbeitnow' },
+    { id: 'indeed46', name: 'Indeed46' },
+    { id: 'linkedin-search', name: 'LinkedIn Search' },
+    { id: 'active-jobs-db', name: 'Active Jobs DB' },
+    { id: 'job-posting-feed', name: 'Job Posting Feed' },
+    { id: 'internships-api', name: 'Internships API' },
+    { id: 'indeed-scraper', name: 'Indeed Scraper' },
+    { id: 'linkedin-jobs2', name: 'LinkedIn Jobs 2' },
+    { id: 'jobfinder-api1', name: 'JobFinder API 1' },
+    { id: 'hacker-news-who-is-hiring', name: 'Hacker News (Who is Hiring)' },
+    { id: 'upwork-jobs-api3', name: 'Upwork Jobs API 3' },
+    { id: 'linkedin-jobs12', name: 'LinkedIn Jobs 1.2' },
+    { id: 'google-jobs-scraper4', name: 'Google Jobs Scraper' },
+    { id: 'linkedin-job-search-api2', name: 'LinkedIn Job Search API 2' },
+    { id: 'linkedin-job-search-real-time', name: 'LinkedIn Job Search Real-Time' },
+    { id: 'linkedin-jobs-by-datanest', name: 'LinkedIn Jobs by DataNest' },
+    { id: 'ats-jobs-db', name: 'ATS Jobs DB' },
+    { id: 'adzuna', name: 'Adzuna (Paused)' }
+]
+
 export default function AdminJobs() {
     const [status, setStatus] = useState('pending')
     const [page, setPage] = useState(1)
     const [showN8n, setShowN8n] = useState(false)
+    const [selectedSource, setSelectedSource] = useState('all')
+    const [deleteRange, setDeleteRange] = useState('all')
     const qc = useQueryClient()
 
     const { data, isLoading } = useQuery({
@@ -37,9 +64,26 @@ export default function AdminJobs() {
         onSuccess: () => { toast.success('Job deleted'); qc.invalidateQueries(['admin-jobs']) },
     })
 
+    const deleteAllMutation = useMutation({
+        mutationFn: (params) => adminAPI.deleteOldJobs(params),
+        onSuccess: (res) => {
+            toast.success(res.message || 'Jobs deleted successfully!');
+            qc.invalidateQueries(['admin-jobs']);
+        },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || 'Error deleting jobs.');
+        }
+    })
+
     const fetchMutation = useMutation({
-        mutationFn: () => adminAPI.fetchJobs(),
-        onSuccess: (res) => { toast.success(`${res.data.saved} new jobs fetched!`); qc.invalidateQueries(['admin-jobs']) },
+        mutationFn: (source) => adminAPI.fetchJobs(source),
+        onSuccess: (res) => {
+            toast.success(`Successfully fetched new jobs!`);
+            qc.invalidateQueries(['admin-jobs'])
+        },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || 'Error fetching jobs.');
+        }
     })
 
     return (
@@ -53,9 +97,92 @@ export default function AdminJobs() {
                     <button onClick={() => setShowN8n(true)} className="btn-secondary flex items-center gap-2 text-sm">
                         <Webhook size={14} className="text-primary-600" /> Connect Webhook (N8N)
                     </button>
-                    <button onClick={() => fetchMutation.mutate()} disabled={fetchMutation.isPending} className="btn-primary flex items-center gap-2 text-sm">
-                        <RefreshCw size={14} className={fetchMutation.isPending ? 'animate-spin' : ''} /> Fetch New Jobs
-                    </button>
+                </div>
+            </div>
+
+            {/* Control Panel Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Job Fetching Controls */}
+                <div className="card flex flex-col justify-between">
+                    <div>
+                        <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <RefreshCw size={16} className="text-primary-600" />
+                            Fetch Jobs from API
+                        </h2>
+                        <p className="text-xs text-gray-500 mt-1">Select a specific API source or fetch from all configured sources at once.</p>
+                        
+                        <div className="mt-4">
+                            <label className="label text-xs">Select Job Source API</label>
+                            <select 
+                                value={selectedSource} 
+                                onChange={(e) => setSelectedSource(e.target.value)}
+                                className="w-full text-xs px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-400"
+                            >
+                                {JOB_SOURCES.map(src => (
+                                    <option key={src.id} value={src.id}>{src.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div className="mt-5 flex gap-2">
+                        <button 
+                            onClick={() => fetchMutation.mutate(selectedSource)} 
+                            disabled={fetchMutation.isPending} 
+                            className="btn-primary flex-1 flex items-center justify-center gap-2 text-xs py-2 px-3"
+                        >
+                            <RefreshCw size={14} className={fetchMutation.isPending ? 'animate-spin' : ''} />
+                            {fetchMutation.isPending ? 'Fetching...' : 'Trigger Fetch Ingestion'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Database Cleanup Controls */}
+                <div className="card flex flex-col justify-between">
+                    <div>
+                        <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Trash2 size={16} className="text-red-500" />
+                            Database Job Cleanup
+                        </h2>
+                        <p className="text-xs text-gray-500 mt-1">Delete ingested jobs from the database. This action is irreversible.</p>
+                        
+                        <div className="mt-4">
+                            <label className="label text-xs">Cleanup Range</label>
+                            <select 
+                                value={deleteRange} 
+                                onChange={(e) => setDeleteRange(e.target.value)}
+                                className="w-full text-xs px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-400"
+                            >
+                                <option value="all">Delete All Jobs (Single Click)</option>
+                                <option value="2days">Delete Jobs Older than 2 Days</option>
+                                <option value="1week">Delete Jobs Older than 1 Week</option>
+                                <option value="1month">Delete Jobs Older than 1 Month</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div className="mt-5">
+                        <button 
+                            onClick={() => {
+                                const isAll = deleteRange === 'all';
+                                const confirmMsg = isAll 
+                                    ? '⚠️ WARNING: Are you sure you want to delete ALL jobs from the database? This cannot be undone!' 
+                                    : `Are you sure you want to delete jobs older than ${deleteRange}?`;
+                                if (window.confirm(confirmMsg)) {
+                                    if (isAll) {
+                                        deleteAllMutation.mutate({ all: true });
+                                    } else {
+                                        deleteAllMutation.mutate({ relative: deleteRange });
+                                    }
+                                }
+                            }} 
+                            disabled={deleteAllMutation.isPending} 
+                            className="btn-danger w-full flex items-center justify-center gap-2 text-xs py-2 px-3 bg-red-600 hover:bg-red-500 active:bg-red-700"
+                        >
+                            <Trash2 size={14} className={deleteAllMutation.isPending ? 'animate-pulse' : ''} />
+                            {deleteAllMutation.isPending ? 'Deleting...' : deleteRange === 'all' ? 'Delete All Jobs Now' : `Delete Jobs Older than ${deleteRange}`}
+                        </button>
+                    </div>
                 </div>
             </div>
 
