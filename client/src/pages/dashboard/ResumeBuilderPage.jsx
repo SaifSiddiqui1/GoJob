@@ -88,9 +88,16 @@ const SECTION = ({ title, icon: Icon, open, toggle, children, count }) => (
     </div>
 )
 
-// ── Skill Tag Input ───────────────────────────────────────────────────────────
-function SkillTagInput({ skills, onChange }) {
+// ── Categorized Skill Tag Input ──────────────────────────────────────────────
+const SKILL_CATEGORIES = [
+    { key: 'technical', label: 'Technical Skills', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
+    { key: 'soft',      label: 'Soft Skills',      color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
+    { key: 'other',     label: 'Other Skills',     color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300', border: 'border-violet-200 dark:border-violet-800' },
+]
+
+function CategoryTagInput({ catKey, label, color, border, skills, onChange }) {
     const [input, setInput] = useState('')
+    const inputId = `skill-input-${catKey}`
 
     const addSkill = (val) => {
         const trimmed = val.trim()
@@ -98,47 +105,32 @@ function SkillTagInput({ skills, onChange }) {
         onChange([...skills, trimmed])
         setInput('')
     }
-
     const removeSkill = (idx) => onChange(skills.filter((_, i) => i !== idx))
-
     const onKeyDown = (e) => {
-        if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault()
-            addSkill(input)
-        } else if (e.key === 'Backspace' && !input && skills.length > 0) {
-            removeSkill(skills.length - 1)
-        }
+        if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addSkill(input) }
+        else if (e.key === 'Backspace' && !input && skills.length > 0) removeSkill(skills.length - 1)
     }
 
-    const COLORS = [
-        'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
-        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-        'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-        'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
-        'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
-    ]
-
     return (
-        <div className="flex flex-wrap gap-1.5 p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 min-h-[44px] cursor-text"
-            onClick={() => document.getElementById('skill-input')?.focus()}>
-            {skills.map((s, idx) => (
-                <span key={idx} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${COLORS[idx % COLORS.length]}`}>
-                    {s}
-                    <button type="button" onClick={() => removeSkill(idx)} className="hover:opacity-70 transition-opacity">
-                        <X size={10} />
-                    </button>
-                </span>
-            ))}
-            <input
-                id="skill-input"
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={onKeyDown}
-                onBlur={() => addSkill(input)}
-                placeholder={skills.length === 0 ? 'Type skill & press Enter…' : '+ Add more'}
-                className="flex-1 min-w-[120px] bg-transparent text-xs text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none py-0.5"
-            />
+        <div className={`border ${border} rounded-xl bg-white dark:bg-gray-900 p-3 space-y-2`}>
+            <p className={`text-[10px] font-bold uppercase tracking-wider ${color.split(' ')[1]}`}>{label}</p>
+            <div className="flex flex-wrap gap-1.5 min-h-[36px] cursor-text" onClick={() => document.getElementById(inputId)?.focus()}>
+                {skills.map((s, idx) => (
+                    <span key={idx} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold ${color}`}>
+                        {s}
+                        <button type="button" onClick={() => removeSkill(idx)} className="hover:opacity-70"><X size={9} /></button>
+                    </span>
+                ))}
+                <input
+                    id={inputId}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={onKeyDown}
+                    onBlur={() => addSkill(input)}
+                    placeholder={skills.length === 0 ? 'Type & press Enter…' : '+ Add'}
+                    className="flex-1 min-w-[100px] bg-transparent text-xs text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none py-0.5"
+                />
+            </div>
         </div>
     )
 }
@@ -381,21 +373,48 @@ export default function ResumeBuilderPage() {
     })
 
     const saveMutation = useMutation({
-        mutationFn: (data) => id ? resumeAPI.update(id, data) : resumeAPI.create(data),
+        mutationFn: (data) => {
+            // Normalise skills before saving
+            const payload = { ...data }
+            if (Array.isArray(payload.skills) && payload.skills.length > 0 && typeof payload.skills[0] === 'object' && !Array.isArray(payload.skills[0])) {
+                // already categorized object — keep as-is
+            }
+            return id ? resumeAPI.update(id, payload) : resumeAPI.create(payload)
+        },
         onSuccess: (res) => {
             qc.invalidateQueries(['resumes'])
             toast.success('Resume saved!')
             if (!id) navigate(`/dashboard/resume/builder/${res.data.resume._id}`)
         },
-        onError: () => toast.error('Failed to save'),
+        onError: (err) => toast.error(err?.response?.data?.message || 'Failed to save'),
     })
 
     const aiSummaryMutation = useMutation({
         mutationFn: () => aiAPI.generateSummary({ resumeData: resume }),
         onSuccess: (res) => {
-            setResume(p => ({ ...p, personalInfo: { ...p.personalInfo, summary: res.data.summary } }))
+            const text = res.data.summary || res.data?.data?.summary || ''
+            setResume(p => ({ ...p, personalInfo: { ...p.personalInfo, summary: text } }))
             toast.success('AI summary generated!')
         },
+    })
+
+    const [aiExpIdx, setAiExpIdx] = useState(null)
+    const aiExpMutation = useMutation({
+        mutationFn: (idx) => {
+            const exp = resume.experience[idx]
+            return aiAPI.generateSummary({
+                resumeData: resume,
+                mode: 'experience',
+                context: `Position: ${exp.position}, Company: ${exp.company}`
+            })
+        },
+        onSuccess: (res, idx) => {
+            const text = res.data.summary || res.data.description || ''
+            upExp(idx, 'description', text)
+            toast.success('Responsibilities generated!')
+            setAiExpIdx(null)
+        },
+        onError: () => { toast.error('AI generation failed'); setAiExpIdx(null) },
     })
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -408,16 +427,52 @@ export default function ResumeBuilderPage() {
     const upExp     = (i, field, val) => setResume(p => { const e = [...p.experience]; e[i] = { ...e[i], [field]: val }; return { ...p, experience: e } })
     const removeExp = (i) => setResume(p => ({ ...p, experience: p.experience.filter((_, idx) => idx !== i) }))
 
-    // Education
+    // Education — drag refs
+    const eduDragIdx = useRef(null)
+    const eduDragOverIdx = useRef(null)
     const addEdu    = () => setResume(p => ({ ...p, education: [...p.education, { institution: '', degree: '', field: '', startDate: '', endDate: '', grade: '' }] }))
     const upEdu     = (i, field, val) => setResume(p => { const e = [...p.education]; e[i] = { ...e[i], [field]: val }; return { ...p, education: e } })
     const removeEdu = (i) => setResume(p => ({ ...p, education: p.education.filter((_, idx) => idx !== i) }))
+    const sortEduByDate = () => setResume(p => ({
+        ...p,
+        education: [...p.education].sort((a, b) => {
+            const da = a.endDate || a.startDate || ''
+            const db = b.endDate || b.startDate || ''
+            return db.localeCompare(da) // newest first
+        })
+    }))
+    const onEduDragStart = (i) => { eduDragIdx.current = i }
+    const onEduDragOver  = (e, i) => { e.preventDefault(); eduDragOverIdx.current = i }
+    const onEduDrop      = () => {
+        const from = eduDragIdx.current
+        const to   = eduDragOverIdx.current
+        if (from === null || to === null || from === to) return
+        setResume(p => {
+            const edu = [...p.education]
+            const [moved] = edu.splice(from, 1)
+            edu.splice(to, 0, moved)
+            return { ...p, education: edu }
+        })
+        eduDragIdx.current = null
+        eduDragOverIdx.current = null
+    }
 
-    // Skills (flat array)
-    const setSkills = (skills) => setResume(p => ({ ...p, skills }))
+    // Skills — categorized { technical:[], soft:[], other:[] }
+    const skillsObj = (() => {
+        const raw = resume.skills
+        if (!Array.isArray(raw) || raw.length === 0) return { technical: [], soft: [], other: [] }
+        if (typeof raw[0] === 'string') return { technical: raw, soft: [], other: [] }
+        // already an object (saved format)
+        if (raw[0] && typeof raw[0] === 'object' && 'technical' in raw[0]) return raw[0]
+        return { technical: raw.filter(s => typeof s === 'string'), soft: [], other: [] }
+    })()
+    const setSkillCat = (cat, arr) => {
+        const updated = { ...skillsObj, [cat]: arr }
+        setResume(p => ({ ...p, skills: [updated] })) // store as [{technical,soft,other}]
+    }
 
     // Certifications
-    const addCert    = () => setResume(p => ({ ...p, certifications: [...p.certifications, { name: '', issuer: '', date: '', url: '' }] }))
+    const addCert    = () => setResume(p => ({ ...p, certifications: [...p.certifications, { name: '', issuer: '', date: '', url: '', description: '' }] }))
     const upCert     = (i, field, val) => setResume(p => { const c = [...p.certifications]; c[i] = { ...c[i], [field]: val }; return { ...p, certifications: c } })
     const removeCert = (i) => setResume(p => ({ ...p, certifications: p.certifications.filter((_, idx) => idx !== i) }))
 
@@ -505,7 +560,7 @@ export default function ResumeBuilderPage() {
             if (!isDragging.current || !containerRef.current) return
             const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX
             const { left, width } = containerRef.current.getBoundingClientRect()
-            leftPctRef.current = Math.min(Math.max(((clientX - left) / width) * 100, 25), 75)
+            leftPctRef.current = Math.min(Math.max(((clientX - left) / width) * 100, 20), 85)
             if (rafId.current) cancelAnimationFrame(rafId.current)
             rafId.current = requestAnimationFrame(() => setLeftPct(leftPctRef.current))
         }
@@ -584,13 +639,13 @@ export default function ResumeBuilderPage() {
                     {/* ── CORE INFORMATION ── */}
                     <SECTION title="Core Information" icon={AlignLeft} open={open.personal} toggle={() => toggle('personal')}>
                         <div className="grid grid-cols-2 gap-3">
-                            <input value={resume.personalInfo.fullName}  onChange={e => updatePersonal('fullName',  e.target.value)} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200 col-span-2" placeholder="Full Name" />
+                            <input value={resume.personalInfo.fullName} onChange={e => updatePersonal('fullName', e.target.value.replace(/[^a-zA-Z\s.''-]/g, ''))} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200 col-span-2" placeholder="Full Name (letters only)" />
                             <input value={resume.personalInfo.email}     onChange={e => updatePersonal('email',     e.target.value)} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200" placeholder="Email" type="email" />
-                            <input value={resume.personalInfo.phone}     onChange={e => updatePersonal('phone',     e.target.value)} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200" placeholder="Phone" />
+                            <input value={resume.personalInfo.phone} onChange={e => updatePersonal('phone', e.target.value.replace(/[^0-9+\s()-]/g, ''))} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200" placeholder="Phone (+91 98765 43210)" inputMode="tel" />
                             <input value={resume.personalInfo.location}  onChange={e => updatePersonal('location',  e.target.value)} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200 col-span-2" placeholder="City, Country" />
-                            <input value={resume.personalInfo.linkedin}  onChange={e => updatePersonal('linkedin',  e.target.value)} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200" placeholder="LinkedIn URL" />
-                            <input value={resume.personalInfo.github}    onChange={e => updatePersonal('github',    e.target.value)} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200" placeholder="GitHub URL" />
-                            <input value={resume.personalInfo.portfolio} onChange={e => updatePersonal('portfolio', e.target.value)} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200 col-span-2" placeholder="Portfolio / Personal Website URL" />
+                            <input value={resume.personalInfo.linkedin} onChange={e => updatePersonal('linkedin', e.target.value)} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200" placeholder="LinkedIn URL" type="url" />
+                            <input value={resume.personalInfo.github} onChange={e => updatePersonal('github', e.target.value)} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200" placeholder="GitHub URL" type="url" />
+                            <input value={resume.personalInfo.portfolio} onChange={e => updatePersonal('portfolio', e.target.value)} className="input bg-gray-50 dark:bg-gray-800/50 border-gray-200 col-span-2" placeholder="Portfolio URL" type="url" />
                         </div>
                         <div className="relative mt-1">
                             <div className="flex items-center justify-between mb-1.5">
@@ -650,7 +705,17 @@ export default function ResumeBuilderPage() {
 
                                 {/* Description — rich text editor */}
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Key Responsibilities & Achievements</label>
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Key Responsibilities &amp; Achievements</label>
+                                        <button
+                                            onClick={() => { if (!exp.position) { toast.error('Add job title first'); return; } setAiExpIdx(i); aiExpMutation.mutate(i) }}
+                                            disabled={aiExpMutation.isPending && aiExpIdx === i}
+                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg shadow hover:shadow-md transition-all"
+                                        >
+                                            <Sparkles size={9} className={aiExpMutation.isPending && aiExpIdx === i ? 'animate-pulse' : ''} />
+                                            {aiExpMutation.isPending && aiExpIdx === i ? 'Generating...' : 'AI Generate'}
+                                        </button>
+                                    </div>
                                     <RichTextEditor
                                         value={exp.description}
                                         onChange={v => upExp(i, 'description', v)}
@@ -668,20 +733,34 @@ export default function ResumeBuilderPage() {
 
                     {/* ── EDUCATION ── */}
                     <SECTION title="Education History" icon={GraduationCap} open={open.education} toggle={() => toggle('education')} count={resume.education.length}>
+                        {resume.education.length > 1 && (
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-[10px] text-gray-400">Drag cards to reorder, or auto-sort by date</p>
+                                <button onClick={sortEduByDate} className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-violet-100 hover:text-violet-700 rounded-lg transition-colors">
+                                    ↕ Sort by Date
+                                </button>
+                            </div>
+                        )}
                         {resume.education.map((edu, i) => (
-                            <div key={i} className="group relative border border-gray-200 dark:border-gray-700/60 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-800/30 space-y-3">
+                            <div key={i}
+                                draggable
+                                onDragStart={() => onEduDragStart(i)}
+                                onDragOver={e => onEduDragOver(e, i)}
+                                onDrop={onEduDrop}
+                                className="group relative border border-gray-200 dark:border-gray-700/60 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-800/30 space-y-3 cursor-grab active:cursor-grabbing">
+                                <div className="absolute top-3 left-3 text-gray-300 dark:text-gray-600 select-none">⠿</div>
                                 <button onClick={() => removeEdu(i)} className="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md opacity-0 group-hover:opacity-100 transition-all">
                                     <Trash2 size={13} />
                                 </button>
 
-                                <div className="grid grid-cols-2 gap-3 pr-7">
+                                <div className="grid grid-cols-2 gap-3 px-6">
                                     <input value={edu.institution} onChange={e => upEdu(i, 'institution', e.target.value)} className="input bg-white dark:bg-gray-900 border-gray-200 col-span-2" placeholder="University / School Name" />
                                     <input value={edu.degree}      onChange={e => upEdu(i, 'degree',      e.target.value)} className="input bg-white dark:bg-gray-900 border-gray-200" placeholder="Degree (e.g. B.Tech, MBA)" />
                                     <input value={edu.field}       onChange={e => upEdu(i, 'field',       e.target.value)} className="input bg-white dark:bg-gray-900 border-gray-200" placeholder="Major / Field" />
                                     <input value={edu.grade}       onChange={e => upEdu(i, 'grade',       e.target.value)} className="input bg-white dark:bg-gray-900 border-gray-200 col-span-2" placeholder="GPA / Percentage / Grade (optional)" />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 gap-3 px-6">
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Start Date</label>
                                         <MonthYearPicker value={edu.startDate} onChange={v => upEdu(i, 'startDate', v)} />
@@ -699,25 +778,20 @@ export default function ResumeBuilderPage() {
                     </SECTION>
 
                     {/* ── SKILLS ── */}
-                    <SECTION title="Skills" icon={Code} open={open.skills} toggle={() => toggle('skills')} count={skillsList.length}>
+                    <SECTION title="Skills" icon={Code} open={open.skills} toggle={() => toggle('skills')} count={Object.values(skillsObj).flat().length}>
                         <div className="space-y-3">
-                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                Type a skill and press <kbd className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[10px] font-mono">Enter</kbd> or <kbd className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[10px] font-mono">,</kbd> to add. Backspace to remove last.
-                            </p>
-                            <SkillTagInput skills={skillsList} onChange={setSkills} />
-
-                            {/* Quick-add popular skills */}
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Quick Add</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {['JavaScript','Python','React','Node.js','TypeScript','SQL','Git','Figma','Excel','Leadership','Communication','Problem Solving'].filter(s => !skillsList.includes(s)).map(s => (
-                                        <button key={s} onClick={() => setSkills([...skillsList, s])}
-                                            className="px-2 py-1 rounded-lg text-[11px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-violet-100 hover:text-violet-700 dark:hover:bg-violet-900/30 dark:hover:text-violet-300 transition-colors font-medium">
-                                            + {s}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400">Add skills to each category. Type &amp; press <kbd className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[10px] font-mono">Enter</kbd> or <kbd className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[10px] font-mono">,</kbd></p>
+                            {SKILL_CATEGORIES.map(cat => (
+                                <CategoryTagInput
+                                    key={cat.key}
+                                    catKey={cat.key}
+                                    label={cat.label}
+                                    color={cat.color}
+                                    border={cat.border}
+                                    skills={skillsObj[cat.key] || []}
+                                    onChange={arr => setSkillCat(cat.key, arr)}
+                                />
+                            ))}
                         </div>
                     </SECTION>
 
@@ -755,6 +829,17 @@ export default function ResumeBuilderPage() {
                                             <LinkIcon size={10} /> Verify credential
                                         </a>
                                     )}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">What I Learned</label>
+                                    <textarea
+                                        value={cert.description || ''}
+                                        onChange={e => upCert(i, 'description', e.target.value)}
+                                        className="input bg-white dark:bg-gray-900 border-gray-200 w-full resize-none"
+                                        placeholder="Key skills or knowledge gained from this certification…"
+                                        rows={2}
+                                    />
                                 </div>
                             </div>
                         ))}

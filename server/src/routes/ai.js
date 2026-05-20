@@ -164,9 +164,15 @@ router.post('/enhance-resume', protect, premiumOrAdmin, async (req, res, next) =
 // Generate professional summary
 router.post('/generate-summary', protect, async (req, res, next) => {
     try {
-        const { resumeData } = req.body;
-        const summary = await aiService.generateSummary(resumeData);
-        res.json({ success: true, data: { summary } });
+        const { resumeData, mode, context } = req.body;
+        let result;
+        if (mode === 'experience') {
+            result = await aiService.generateExperienceDescription(resumeData, context);
+            res.json({ success: true, summary: result });
+        } else {
+            result = await aiService.generateSummary(resumeData);
+            res.json({ success: true, summary: result });
+        }
     } catch (err) { next(err); }
 });
 

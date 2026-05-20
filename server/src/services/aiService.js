@@ -436,5 +436,19 @@ module.exports = {
     optimizeLinkedInProfile,
     adviseCareerPath,
     summarizeJobDescription,
-    parseResumeText
+    parseResumeText,
+    generateExperienceDescription: async (resumeData, context) => {
+        const name = resumeData?.personalInfo?.fullName || 'the candidate';
+        const prompt = `You are a professional resume writer. Generate 4-6 concise, impactful bullet points for a resume experience entry.
+Context: ${context || 'Generic professional role'}
+Candidate: ${name}
+Rules:
+- Start each bullet with a strong action verb (Led, Built, Improved, Designed, etc.)
+- Include quantifiable achievements where possible (%, $, numbers)
+- Keep each bullet under 20 words
+- Return ONLY the bullet points as plain text, one per line, starting with •
+No intro, no extra text.`;
+        const result = await model.generateContent(prompt);
+        return result.response.text().trim();
+    }
 };

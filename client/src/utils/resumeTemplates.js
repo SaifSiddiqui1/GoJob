@@ -1,4 +1,4 @@
-// ─── Resume Template Definitions ─────────────────────────────────────────────
+﻿// ─── Resume Template Definitions ─────────────────────────────────────────────
 // Each template has: id, name, description, thumbnail colors, generateHTML(resume)
 
 export const TEMPLATES = [
@@ -69,8 +69,11 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
         return toHtml(text)
     }
 
+    // ── Link helper
+    const linkify = (url) => { if (!url) return ''; const h = url.startsWith('http') ? url : 'https://' + url; return `<a href="${h}" style="color:inherit;text-decoration:underline">${url}</a>` }
+    const isLink  = (x) => /^https?:|linkedin\.com|github\.com|portfolio/.test(x)
     // Shared helpers
-    const contact = [p.email, p.phone, p.location, p.linkedin, p.github].filter(Boolean).join('  •  ')
+    const contact = [p.email, p.phone, p.location, p.linkedin, p.github].filter(Boolean).map(x => isLink(x) ? linkify(x) : x).join('  •  ')
     // Add data-rte so parent page can listen to field edits from iframe
     const expHtml = exp.map((e, i) => `
         <div class="entry">
@@ -99,6 +102,7 @@ export function generateTemplateHTML(resume, templateId = 'classic', { preview =
     <div style="margin-top:52px;">`
 
     const PRINT_STYLE = preview ? '' : `
+    @page{margin:12mm size:A4}@media print{html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
     .print-bar{position:fixed;top:0;left:0;right:0;background:#2563eb;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-family:sans-serif;font-size:13px;z-index:999}
     .pbtn{padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-weight:600;font-size:13px;margin-left:6px}
     .print-btn{background:#fff;color:#2563eb}.close-btn{background:rgba(255,255,255,.2);color:#fff}
