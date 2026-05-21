@@ -20,12 +20,7 @@ export default function ForgotPasswordPage() {
             // userId is at top-level in response (not nested in .data)
             const uid = res.userId || res.data?.userId
             setUserId(uid)
-            if (res.devOtp) {
-                setForm(p => ({ ...p, otp: res.devOtp }))
-                toast.success(`📧 OTP auto-filled: ${res.devOtp} (check server console — email not configured)`)
-            } else {
-                toast.success('OTP sent! Check your email (or server console if email not set up)')
-            }
+            toast.success('If that email exists, a reset OTP was sent. Check your inbox!')
             setStep(2)
         } catch (err) {
             toast.error(err.response?.data?.message || 'Something went wrong')

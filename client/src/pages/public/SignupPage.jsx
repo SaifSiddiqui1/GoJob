@@ -56,8 +56,7 @@ export default function SignupPage() {
             const res = await authAPI.register(seekerForm)
             setSeekerUserId(res.data.userId)
             setStep(2)
-            if (res.data.devOtp) { setSeekerOtp(res.data.devOtp); toast.success(`OTP: ${res.data.devOtp}`) }
-            else toast.success('OTP sent to your email!')
+            toast.success('OTP sent to your email!')
         } catch (err) { toast.error(err.response?.data?.message || 'Registration failed.') }
         finally { setLoading(false) }
     }

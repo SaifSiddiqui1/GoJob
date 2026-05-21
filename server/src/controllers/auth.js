@@ -51,31 +51,36 @@ exports.register = async (req, res, next) => {
             console.log(`\n📧 OTP for ${email}: ${otp}  (expires in 10 min)\n`);
         }
 
-        // Send OTP email (fails gracefully if RESEND_API_KEY not set)
         const emailSent = await sendEmail({
             to: email,
             subject: 'Verify your JobVault account',
             html: `
-        <div style="font-family:sans-serif;max-width:500px;margin:auto;padding:30px;border-radius:12px;background:#1e1b4b;color:white;">
-          <h2 style="color:#818cf8;">Welcome to JobVault! 🚀</h2>
-          <p>Your email verification code is:</p>
-          <div style="font-size:36px;font-weight:bold;letter-spacing:8px;text-align:center;padding:20px;background:#312e81;border-radius:8px;margin:20px 0;">${otp}</div>
-          <p style="color:#a5b4fc;">This code expires in 10 minutes.</p>
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:520px;margin:auto;padding:0;border-radius:16px;overflow:hidden;background:#ffffff;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+          <div style="background:linear-gradient(135deg,#1e1b4b 0%,#312e81 100%);padding:40px 32px 32px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:#ffffff;margin-bottom:4px;">JobVault</div>
+            <p style="color:#a5b4fc;font-size:14px;margin:0;">Email Verification</p>
+          </div>
+          <div style="padding:32px;text-align:center;">
+            <p style="color:#374151;font-size:15px;margin:0 0 24px;">Hi <strong>${fullName}</strong>, enter this code to verify your account:</p>
+            <div style="font-size:40px;font-weight:800;letter-spacing:12px;color:#1e1b4b;padding:20px;background:#f5f3ff;border-radius:12px;border:2px dashed #c4b5fd;margin:0 auto 24px;display:inline-block;">${otp}</div>
+            <p style="color:#6b7280;font-size:13px;margin:0;">This code expires in <strong>10 minutes</strong>.</p>
+            <p style="color:#9ca3af;font-size:12px;margin:16px 0 0;">If you didn't create an account, please ignore this email.</p>
+          </div>
+          <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb;">
+            <p style="color:#9ca3af;font-size:11px;margin:0;">© ${new Date().getFullYear()} JobVault. All rights reserved.</p>
+          </div>
         </div>
       `,
         });
 
-        const isDev = process.env.NODE_ENV !== 'production';
         res.status(201).json({
             success: true,
             message: emailSent
-                ? 'Registration successful. Check your email for the OTP.'
-                : 'Registration successful. Check the server console for your OTP (email not configured).',
+                ? 'Registration successful! Check your email for the verification code.'
+                : 'Registration successful. Email delivery failed — please contact support or try again.',
             data: {
                 userId: user._id,
                 email: user.email,
-                // In dev mode without email: return OTP so frontend can pre-fill it
-                ...(isDev && !emailSent && { devOtp: otp }),
             },
         });
     } catch (err) {
@@ -126,7 +131,19 @@ exports.resendOTP = async (req, res, next) => {
         await sendEmail({
             to: user.email,
             subject: 'JobVault — New verification code',
-            html: `<div style="font-family:sans-serif;padding:20px;"><h3>Your new OTP: <strong style="font-size:28px;letter-spacing:4px;">${otp}</strong></h3><p>Expires in 10 minutes.</p></div>`,
+            html: `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:520px;margin:auto;padding:0;border-radius:16px;overflow:hidden;background:#ffffff;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+          <div style="background:linear-gradient(135deg,#1e1b4b 0%,#312e81 100%);padding:32px;text-align:center;">
+            <div style="font-size:24px;font-weight:700;color:#ffffff;">JobVault</div>
+            <p style="color:#a5b4fc;font-size:13px;margin:4px 0 0;">New Verification Code</p>
+          </div>
+          <div style="padding:32px;text-align:center;">
+            <p style="color:#374151;font-size:14px;margin:0 0 20px;">Here's your new verification code:</p>
+            <div style="font-size:36px;font-weight:800;letter-spacing:10px;color:#1e1b4b;padding:16px;background:#f5f3ff;border-radius:12px;border:2px dashed #c4b5fd;display:inline-block;">${otp}</div>
+            <p style="color:#6b7280;font-size:13px;margin:20px 0 0;">Expires in <strong>10 minutes</strong>.</p>
+          </div>
+        </div>
+      `,
         });
 
         res.json({ success: true, message: 'New OTP sent to your email.' });
@@ -209,17 +226,28 @@ exports.forgotPassword = async (req, res, next) => {
         const emailSent = await sendEmail({
             to: email,
             subject: 'JobVault — Password Reset OTP',
-            html: `<div style="font-family:sans-serif;padding:20px;"><h3>Password Reset Code</h3><p>Your OTP: <strong style="font-size:28px;">${otp}</strong></p><p>Expires in 15 minutes.</p></div>`,
+            html: `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:520px;margin:auto;padding:0;border-radius:16px;overflow:hidden;background:#ffffff;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+          <div style="background:linear-gradient(135deg,#991b1b 0%,#dc2626 100%);padding:32px;text-align:center;">
+            <div style="font-size:24px;font-weight:700;color:#ffffff;">JobVault</div>
+            <p style="color:#fecaca;font-size:13px;margin:4px 0 0;">Password Reset</p>
+          </div>
+          <div style="padding:32px;text-align:center;">
+            <p style="color:#374151;font-size:14px;margin:0 0 20px;">Your password reset code is:</p>
+            <div style="font-size:36px;font-weight:800;letter-spacing:10px;color:#991b1b;padding:16px;background:#fef2f2;border-radius:12px;border:2px dashed #fca5a5;display:inline-block;">${otp}</div>
+            <p style="color:#6b7280;font-size:13px;margin:20px 0 0;">Expires in <strong>15 minutes</strong>.</p>
+            <p style="color:#9ca3af;font-size:12px;margin:12px 0 0;">If you didn't request this, ignore this email.</p>
+          </div>
+        </div>
+      `,
         });
 
-        const isDev = process.env.NODE_ENV !== 'production';
         res.json({
             success: true,
             message: emailSent
                 ? 'If that email exists, a reset OTP was sent.'
-                : 'OTP generated. Check server console (email not configured).',
+                : 'Password reset failed — email delivery error.',
             userId: user._id,
-            ...(isDev && !emailSent && { devOtp: otp }),
         });
 
     } catch (err) {

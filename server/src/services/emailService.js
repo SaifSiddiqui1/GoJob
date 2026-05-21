@@ -1,36 +1,37 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// ─── Titan Email SMTP Transport ───────────────────────────────────────────────
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.titan.email',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false, // true for port 465, false for 587
-    auth: {
-        user: process.env.SMTP_USER || 'jobvault@jobvault.live',
-        pass: process.env.SMTP_PASS,
-    },
-    tls: {
-        rejectUnauthorized: false,
-    },
-    connectionTimeout: 5000, // 5s — fail fast if SMTP not reachable
-    greetingTimeout: 5000,
-    socketTimeout: 10000,
-});
+// ─── Resend Email Transport ───────────────────────────────────────────────────
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_NAME = 'JobVault';
-const FROM_EMAIL = process.env.SMTP_USER || 'jobvault@jobvault.live';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
+/**
+ * Send an email via Resend.
+ * Returns the Resend response on success, or null on failure (fails gracefully).
+ */
 const sendEmail = async ({ to, subject, html, text }) => {
+    if (!process.env.RESEND_API_KEY) {
+        console.warn('⚠️  RESEND_API_KEY not set — email not sent. Set it in your .env file.');
+        return null;
+    }
+
     try {
-        const info = await transporter.sendMail({
-            from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-            to,
+        const { data, error } = await resend.emails.send({
+            from: `${FROM_NAME} <${FROM_EMAIL}>`,
+            to: [to],
             subject,
             html,
-            text,
+            ...(text && { text }),
         });
-        console.log('Email sent:', info.messageId);
-        return info;
+
+        if (error) {
+            console.error('Resend API error:', error);
+            return null;
+        }
+
+        console.log('✅ Email sent via Resend:', data?.id);
+        return data;
     } catch (err) {
         console.error('Email send error:', err.message);
         // Don't throw — email failure shouldn't crash the request
